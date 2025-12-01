@@ -27,7 +27,6 @@ defprotocol Otzel.Content do
         def invert(_, _), do: raise "not implemented"
         def compose(_, _), do: raise "not implemented"
         def transform(_, _, _), do: raise "not implemented"
-        def diff(_, _), do: raise "not implemented"
       end
 
   The `atomic: true` option automatically implements:
@@ -35,6 +34,7 @@ defprotocol Otzel.Content do
   - `take/2` - Returns the whole content
   - `merge_into/2` - Returns nil (cannot merge)
   - `as_binary/1` - Returns nil
+  - `diff/2` - Returns empty list for equal content, or delete+insert for different content
 
   """
 

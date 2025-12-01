@@ -40,7 +40,7 @@ defmodule Otzel.Op.Insert do
   defp codepoint_length(string), do: length(String.codepoints(string))
 
   @type t :: %__MODULE__{
-          content: Otzel.content(),
+          content: Otzel.Content.t(),
           attrs: Attrs.t()
         }
 

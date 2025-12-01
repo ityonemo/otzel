@@ -1,15 +1,45 @@
 defmodule Otzel.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+  @source_url "https://github.com/ityonemo/otzel"
+
   def project do
     [
       app: :otzel,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.18",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
-      aliases: aliases()
+      aliases: aliases(),
+      description: description(),
+      package: package(),
+      docs: docs(),
+      source_url: @source_url
+    ]
+  end
+
+  defp description do
+    "An Elixir library for Operational Transformation (OT) using the Delta format."
+  end
+
+  defp package do
+    [
+      name: "otzel",
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => @source_url
+      },
+      files: ~w(lib .formatter.exs mix.exs README.md LICENSE)
+    ]
+  end
+
+  defp docs do
+    [
+      main: "Otzel",
+      source_ref: "v#{@version}",
+      source_url: @source_url
     ]
   end
 
@@ -36,12 +66,13 @@ defmodule Otzel.MixProject do
     [
       {:protoss, "~> 1.1", runtime: false},
       {:zigler, "~> 0.15", runtime: false},
-      {:diffy, "~> 1.1"},
+      {:diffy, "~> 1.1", only: :perf},
       {:stream_data, "~> 1.0", only: [:test, :perf]},
       {:delta, "> 0.0.0", only: :perf},
       {:benchee, "> 0.0.0", only: :perf},
       {:tidewave, "~> 0.5", only: :dev},
-      {:bandit, "~> 1.0", only: :dev}
+      {:bandit, "~> 1.0", only: :dev},
+      {:ex_doc, "~> 0.35", only: :dev, runtime: false}
     ]
   end
 

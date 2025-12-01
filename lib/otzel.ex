@@ -52,8 +52,8 @@ defmodule Otzel do
 
   - `Otzel.Content.Iomemo` (default) - Efficient IO-list based strings with O(1) size
     lookups and structural sharing for split/concatenate operations
-  - `Otzel.Content.BitString` - Plain Elixir strings, simpler but less efficient for
-    large documents with frequent edits
+  - `String` - Plain Elixir strings (via the BitString protocol implementation),
+    simpler but less efficient for large documents with frequent edits
 
   """
 
@@ -84,7 +84,7 @@ defmodule Otzel do
   @spec size(t) :: non_neg_integer
   @doc """
   Returns the total size of the operations in the transformation.
-  For strings, the size is the number of graphemes in the string.
+  For strings, the size is the number of codepoints in the string.
 
   ```elixir
   iex> alias Otzel.Op.{Insert, Retain}

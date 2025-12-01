@@ -1,9 +1,13 @@
 defmodule Otzel.Diff do
   @moduledoc """
-  Diff utilities for Otzel.
+  Text diffing utilities for Otzel.
 
-  This module is a placeholder for future diff implementation.
-  The reference implementation from diffy (Erlang) is included below as a comment.
+  This module computes the difference between two binary strings, returning
+  a list of OT operations (Insert, Retain, Delete) that transform the first
+  string into the second.
+
+  The implementation uses a half-match optimization for efficient diffing
+  of large texts with common substrings.
   """
 
   alias Otzel.Op
