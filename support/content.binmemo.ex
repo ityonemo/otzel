@@ -4,9 +4,6 @@ defmodule Otzel.Content.Binmemo do
   @enforce_keys ~w[s len]a
   defstruct @enforce_keys
 
-  # Use codepoints instead of graphemes for consistent counting
-  defp codepoint_length(string), do: length(String.codepoints(string))
-
   defp codepoint_split_at(string, count) do
     codepoints = String.codepoints(string)
     {Enum.take(codepoints, count) |> IO.iodata_to_binary(),
@@ -14,7 +11,7 @@ defmodule Otzel.Content.Binmemo do
   end
 
   def new(s) do
-    %__MODULE__{s: s, len: codepoint_length(s)}
+    %__MODULE__{s: s, len: Otzel._codepoints(s)}
   end
 
   def compose(left, right = %__MODULE__{}) do
@@ -54,11 +51,11 @@ defmodule Otzel.Content.Binmemo do
   end
 
   defp from_diff_op({:delete, text}) do
-    %Otzel.Op.Delete{count: codepoint_length(text)}
+    %Otzel.Op.Delete{count: Otzel._codepoints(text)}
   end
 
   defp from_diff_op({:equal, text}) do
-    %Otzel.Op.Retain{target: codepoint_length(text)}
+    %Otzel.Op.Retain{target: Otzel._codepoints(text)}
   end
 
   def concatenate(list) do
@@ -68,9 +65,6 @@ defmodule Otzel.Content.Binmemo do
     end)
     %__MODULE__{s: strs |> Enum.reverse() |> IO.iodata_to_binary(), len: total_len}
   end
-
-  defp grapheme_to_binary(cp) when is_integer(cp), do: <<cp::utf8>>
-  defp grapheme_to_binary(gc) when is_list(gc), do: for(cp <- gc, do: <<cp::utf8>>, into: "")
 
   defimpl JSON.Encoder do
     def encode(binmemo, opts) do

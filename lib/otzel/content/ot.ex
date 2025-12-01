@@ -31,7 +31,6 @@ defmodule Otzel.Content.Ot do
   use Otzel.Content, atomic: true
 
   alias Otzel.Op.Retain
-  alias Otzel.Attrs
 
   defstruct transform: []
 
@@ -47,11 +46,20 @@ defmodule Otzel.Content.Ot do
     %__MODULE__{transform: Otzel.invert(left.transform, right.transform)}
   end
 
-  def diff(%{transform: src}, %{transform: dst}, src_attr, dst_attr) do
-    %Retain{
-      target: %__MODULE__{transform: Otzel.diff(src, dst)},
-      attrs: Attrs.diff(src_attr, dst_attr)
-    }
+  def diff(src, %__MODULE__{} = dst) do
+    case Otzel.diff(src.transform, dst.transform) do
+      [] -> []
+      inner_diff ->
+        [%Retain{
+          target: %__MODULE__{transform: inner_diff},
+          attrs: nil
+        }]
+    end
+  end
+
+  # Different content types - fall back to delete + insert
+  def diff(_src, dst) do
+    [%Otzel.Op.Delete{count: 1}, %Otzel.Op.Insert{content: dst}]
   end
 
   defimpl JSON.Encoder do

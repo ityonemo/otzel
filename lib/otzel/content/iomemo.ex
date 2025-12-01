@@ -39,13 +39,8 @@ defmodule Otzel.Content.Iomemo do
 
   use Otzel.Content
 
-  alias Otzel.Op.Insert
-
   @enforce_keys ~w[s l]a
   defstruct @enforce_keys
-
-  # Use codepoints instead of graphemes for consistent counting
-  defp codepoint_length(string), do: length(String.codepoints(string))
 
   defp codepoint_split_at(string, count) do
     codepoints = String.codepoints(string)
@@ -90,7 +85,6 @@ defmodule Otzel.Content.Iomemo do
   end
 
   defp to_struct({str, len}), do: %__MODULE__{s: str, l: len}
-  defp to_struct(nil), do: nil
 
   defp iodata_split([head | rest], {len, [lhead | lrest]}, count) do
     case tlen(lhead) do
@@ -127,8 +121,6 @@ defmodule Otzel.Content.Iomemo do
     {{a, count}, {b, len - count}}
   end
 
-  def take(content, _count), do: {content, nil}
-
   def transform(_, _, _), do: raise("unimplemented")
 
   def invert(_, _), do: raise("unimplemented")
@@ -141,40 +133,37 @@ defmodule Otzel.Content.Iomemo do
     %__MODULE__{s: Enum.reverse(rev_str), l: {l, Enum.reverse(rev_ls)}}
   end
 
-  defp grapheme_to_binary(cp) when is_integer(cp), do: <<cp::utf8>>
-  defp grapheme_to_binary(gc) when is_list(gc), do: for(cp <- gc, do: <<cp::utf8>>, into: "")
-
-  defp len_of(binary) when is_binary(binary), do: codepoint_length(binary)
+  defp len_of(binary) when is_binary(binary), do: Otzel._codepoints(binary)
 
   defp len_of(list), do: len_of_list(list, 0)
 
-  defp len_of_list([head | rest], so_far) do
+  defp len_of_list([head | rest], _so_far) do
     head = len_of(head)
-    {count, list} = len_of_list(rest, so_far)
+    {count, list} = len_of_list(rest, 0)
     {count + count_of(head), [head | list]}
   end
 
-  defp len_of_list([], so_far), do: {0, []}
+  defp len_of_list([], _so_far), do: {0, []}
 
-  defp len_of_list(head, so_far) do
+  defp len_of_list(head, _so_far) do
     head
     |> len_of
     |> then(&{count_of(&1), &1})
   end
 
   defp count_of(integer) when is_integer(integer), do: integer
-  defp count_of({integer, list}), do: integer
+  defp count_of({integer, _list}), do: integer
 
   def as_binary(iodata), do: IO.iodata_to_binary(iodata.s)
 
   def well_formed?(iodata), do: consistent?(iodata.s, iodata.l)
 
   defp consistent?(string, length) when is_binary(string) do
-    codepoint_length(string) == length
+    Otzel._codepoints(string) == length
   end
 
   defp consistent?([str_head | str_tail] = iodata, {size, [len_head | len_tail]}) do
-    size_consistent? = codepoint_length(IO.iodata_to_binary(iodata)) == size
+    size_consistent? = Otzel._codepoints(IO.iodata_to_binary(iodata)) == size
 
     head_consistent? = consistent?(str_head, len_head)
 
@@ -194,23 +183,7 @@ defmodule Otzel.Content.Iomemo do
     a_str = as_binary(a)
     b_str = as_binary(b)
 
-    a_str
-    |> :diffy.diff(b_str)
-    |> Enum.map(&from_diff_op/1)
-  end
-
-
-  # Convert diff ops to Otzel ops
-  defp from_diff_op({:insert, text}) do
-    %Insert{content: new(text)}
-  end
-
-  defp from_diff_op({:delete, text}) do
-    %Otzel.Op.Delete{count: codepoint_length(text)}
-  end
-
-  defp from_diff_op({:equal, text}) do
-    %Otzel.Op.Retain{target: codepoint_length(text)}
+    Otzel.Diff.diff(a_str, b_str, __MODULE__)
   end
 
   defp tlen({len, _}), do: len

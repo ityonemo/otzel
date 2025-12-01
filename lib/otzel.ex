@@ -808,7 +808,7 @@ defmodule Otzel do
   @doc """
   Creates a `Retain` operation with the given target and attributes.
 
-  Note: if a the target is an embedded `t:Otzel.Content.t/0` then the "retain" operation 
+  Note: if a the target is an embedded `t:Otzel.Content.t/0` then the "retain" operation
   signifies that the target should be treated as a delta for the embedded content.
   """
   def retain(target, attrs \\ nil), do: %Retain{target: target, attrs: attrs}
@@ -855,6 +855,14 @@ defmodule Otzel do
     # Get the raw diff operations
     diff_ops = Content.diff(src_content, dst_content)
 
+    # When content is identical but attrs differ, generate retains for attr changes
+    diff_ops =
+      if diff_ops == [] and Content.size(src_content) > 0 do
+        [%Retain{target: Content.size(src_content)}]
+      else
+        diff_ops
+      end
+
     # Apply attributes from destination to Insert/Retain operations,
     # perform semantic cleanup, and compact to remove trailing retains
     diff_ops
@@ -895,8 +903,12 @@ defmodule Otzel do
           {Enum.reverse(split_retains) ++ acc, src_pos + target, dst_pos + target}
 
         %Retain{} = retain, {acc, src_pos, dst_pos} ->
-          # For non-integer retains (embedded content), keep as-is
-          {[retain | acc], src_pos + 1, dst_pos + 1}
+          # For non-integer retains (embedded content), compute attr diff
+          src_attrs = get_attrs_at(src_attrs_index, src_pos)
+          dst_attrs = get_attrs_at(dst_attrs_index, dst_pos)
+          attr_diff = Attrs.diff(src_attrs, dst_attrs)
+          updated_retain = %{retain | attrs: attr_diff}
+          {[updated_retain | acc], src_pos + 1, dst_pos + 1}
 
         %Delete{count: count} = delete, {acc, src_pos, dst_pos} ->
           # Deletes advance source position but not destination
@@ -924,6 +936,13 @@ defmodule Otzel do
         # Multiple attr regions, need to split the content
         split_content_by_attrs(content, dst_pos, splits)
     end
+  end
+
+  # Gets attrs at a specific position from the index
+  defp get_attrs_at(index, pos) do
+    Enum.find_value(index, nil, fn {s, e, attrs} ->
+      if pos >= s and pos < e, do: attrs
+    end)
   end
 
   # Finds attr regions that overlap with the given range [start_pos, end_pos)
@@ -1023,84 +1042,6 @@ defmodule Otzel do
     |> JSON.decode!()
   end
 
-  defp optimize([{:del, items} | rest], so_far) do
-    optimize(rest, [%Delete{count: length(items)} | so_far])
-  end
-
-  defp optimize([{:ins, items} | rest], so_far) do
-    case {Enum.reverse(items, so_far), rest} do
-      # if we have a very short retain, we can optimize it to a delete sequence.
-      {[%{attrs: attrs} | _] = new_so_far, [{:eq, [%{attrs: attrs}] = eq} | rest_rest]} ->
-        optimize([{:del, eq}, {:ins, eq} | rest_rest], new_so_far)
-
-      {new_so_far, rest} ->
-        optimize(rest, new_so_far)
-    end
-  end
-
-  # if a short eq is immediately followed by a delete we can optimize it out.
-  defp optimize([{:eq, [item]} | rest], so_far) do
-    # optimize IF:
-    # - seeking forward on "rest", the attrs on "items" are the same as the attrs on "deletion".
-    # - length of deletion greater than the length of items
-
-    case rest do
-      [{:del, _} = deletion, {:ins, [to_insert | _]} = insertion | rest]
-      when item.attrs == to_insert.attrs ->
-        optimize([deletion, insertion | rest], [%Delete{count: 1}, item | so_far])
-
-      [{:del, dels} = deletion | rest] when length(dels) > 1 ->
-        optimize([deletion | rest], [%Delete{count: 1}, item | so_far])
-
-      _ ->
-        optimize(rest, [%Retain{target: 1, attrs: nil} | so_far])
-    end
-  end
-
-  defp optimize([{:eq, items} | rest], so_far) do
-    optimize(rest, [%Retain{target: length(items), attrs: nil} | so_far])
-  end
-
-  # this mirros the optimization for a singleton retain.
-  defp optimize([{:diff, {dst, src_attrs}} | rest], so_far) do
-    case rest do
-      [{:del, _} = deletion, {:ins, [to_insert | _]} = insertion | rest]
-      when dst.attrs == to_insert.attrs ->
-        optimize([deletion, insertion | rest], [%Delete{count: 1}, dst | so_far])
-
-      [{:del, dels} = deletion | rest] when length(dels) > 1 ->
-        optimize([deletion | rest], [%Delete{count: 1}, dst | so_far])
-
-      _ ->
-        optimize(rest, [%Retain{target: 1, attrs: Attrs.diff(src_attrs, dst.attrs)} | so_far])
-    end
-  end
-
-  defp optimize([{:diff, %Retain{} = retain} | rest], so_far) do
-    optimize(rest, [retain | so_far])
-  end
-
-  defp optimize([], so_far), do: so_far
-
-  defp bubble_merge([%Insert{} = insert | rest], [%Delete{} = delete | acc]) do
-    bubble_merge([insert, delete | rest], acc)
-  end
-
-  # drop an empty retain.
-  defp bubble_merge([%Retain{attrs: nil} = retain | rest], []) when is_integer(retain.target),
-    do: bubble_merge(rest, [])
-
-  defp bubble_merge([head | rest], []), do: bubble_merge(rest, [head])
-
-  defp bubble_merge([head | rest], [acc_head | acc_rest]) do
-    case Op.merge_into(acc_head, head) do
-      nil -> bubble_merge(rest, [head, acc_head | acc_rest])
-      merged -> bubble_merge(rest, [merged | acc_rest])
-    end
-  end
-
-  defp bubble_merge([], so_far), do: so_far
-
   # generically useful utilities
 
   # performs Enum.reverse on the list, but making sure that the last element is not an empty Retain instruction.
@@ -1117,4 +1058,9 @@ defmodule Otzel do
   end
 
   defp finalize([], forward), do: forward
+
+  def _codepoints(string), do: _codepoints(string, 0)
+
+  defp _codepoints(<<_::utf8, rest::binary>>, count), do: _codepoints(rest, count + 1)
+  defp _codepoints(<<>>, count), do: count
 end

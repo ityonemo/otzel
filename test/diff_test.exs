@@ -49,7 +49,6 @@ defmodule OtzelTest.DiffTest do
 
     alias OtzelTest.Content.Integer
 
-    @tag :skip
     test "embed integer match" do
       a = [Otzel.insert(Integer.new(1))]
       b = [Otzel.insert(Integer.new(1))]
@@ -58,7 +57,6 @@ defmodule OtzelTest.DiffTest do
       assert Otzel.compose(a, Otzel.diff(a, b)) == b
     end
 
-    @tag :skip
     test "embed integer mismatch" do
       a = [Otzel.insert(Integer.new(1))]
       b = [Otzel.insert(Integer.new(2))]
@@ -69,7 +67,6 @@ defmodule OtzelTest.DiffTest do
 
     alias OtzelTest.Content.Image
 
-    @tag :skip
     test "embed object match" do
       a = [Otzel.insert(Image.new("http://example.com"))]
       b = [Otzel.insert(Image.new("http://example.com"))]
@@ -78,7 +75,6 @@ defmodule OtzelTest.DiffTest do
       assert Otzel.compose(a, Otzel.diff(a, b)) == b
     end
 
-    @tag :skip
     test "embed object mismatch" do
       a = [Otzel.insert(Image.new("http://example.com", "overwrite"))]
       b = [Otzel.insert(Image.new("http://example.com"))]
@@ -89,7 +85,6 @@ defmodule OtzelTest.DiffTest do
       assert Otzel.compose(a, Otzel.diff(a, b)) == b
     end
 
-    @tag :skip
     test "embed object change" do
       a = [Otzel.insert(Image.new("http://example.com"))]
       b = [Otzel.insert(Image.new("http://example.org"))]
@@ -143,7 +138,6 @@ defmodule OtzelTest.DiffTest do
       assert Otzel.compose(a, Otzel.diff(a, b)) == b
     end
 
-    @tag :skip
     test "equal embeds" do
       a = [Otzel.insert(Op.embed(Otzel.insert("hello")))]
       b = [Otzel.insert(Op.embed(Otzel.insert("hello")))]
@@ -152,7 +146,6 @@ defmodule OtzelTest.DiffTest do
       assert Otzel.compose(a, Otzel.diff(a, b)) == b
     end
 
-    @tag :skip
     test "basic embed diff" do
       a = [Otzel.insert(Op.embed(Otzel.insert("hello world")))]
       b = [Otzel.insert(Op.embed(Otzel.insert("goodbye world")))]
@@ -169,7 +162,6 @@ defmodule OtzelTest.DiffTest do
       assert Otzel.compose(a, Otzel.diff(a, b)) =~ b
     end
 
-    @tag :skip
     test "embed diff with attribute changes" do
       a = [
         Otzel.insert(
@@ -204,7 +196,6 @@ defmodule OtzelTest.DiffTest do
 
     alias OtzelTest.Content.Quote
 
-    @tag :skip
     test "different embeds" do
       a = [Otzel.insert(Op.embed(Otzel.insert("hello world")))]
       b = [Otzel.insert(Quote.new(Otzel.insert("goodbye world")))]
@@ -217,7 +208,6 @@ defmodule OtzelTest.DiffTest do
       assert Otzel.compose(a, Otzel.diff(a, b)) == b
     end
 
-    @tag :skip
     test "embeds without handler diff attributes if equal" do
       a = [Otzel.insert(Quote.new(Otzel.insert("hello world")), %{"author" => "A"})]
       b = [Otzel.insert(Quote.new(Otzel.insert("hello world")), %{"author" => "B"})]
@@ -229,7 +219,6 @@ defmodule OtzelTest.DiffTest do
       assert Otzel.compose(a, Otzel.diff(a, b)) == b
     end
 
-    @tag :skip
     test "embeds without handler replaces whole operation if different content" do
       a = [Otzel.insert(Quote.new(Otzel.insert("foo")), %{"author" => "A"})]
       b = [Otzel.insert(Quote.new(Otzel.insert("bar")), %{"author" => "B"})]

@@ -72,7 +72,6 @@ defprotocol Otzel.Content do
 after
   alias Otzel.Op.Insert
   alias Otzel.Op.Retain
-  alias Otzel.Attr
 
   defmacro __using__(opts) do
     if opts[:atomic] do
@@ -81,12 +80,18 @@ after
         def take(op, _count), do: {op, nil}
         def merge_into(_, _), do: nil
         def as_binary(_), do: nil
+        def concatenate([single]), do: single
+
+        def diff(a, b) when a == b, do: []
+
+        def diff(_a, b) do
+          [%Otzel.Op.Delete{count: 1}, %Otzel.Op.Insert{content: b}]
+        end
+
+        defoverridable diff: 2
       end
     end
   end
-
-  @callback diff(t, t, Attr.t(), Attr.t()) :: Otzel.t() | nil
-  @optional_callbacks diff: 4
 
   def from(%Retain{} = op), do: op.target
   def from(%Insert{} = op), do: op.content

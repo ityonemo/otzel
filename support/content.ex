@@ -31,27 +31,8 @@ end
 defmodule OtzelTest.Content.Quote do
   use Otzel.Content, atomic: true
 
-  alias Otzel.Attrs
-  alias Otzel.Op.Retain
-  alias Otzel.Op.Delete
-
   @enforce_keys [:text]
   defstruct @enforce_keys
-
-  def diff(%{text: src}, %{text: dst}, src_attr, dst_attr) do
-    size = Otzel.size(src)
-
-    case Otzel.diff(src, dst) do
-      [%Delete{count: ^size} | _] ->
-        nil
-
-      diff ->
-        %Retain{
-          target: %__MODULE__{text: diff},
-          attrs: Attrs.diff(src_attr, dst_attr)
-        }
-    end
-  end
 
   def new(text), do: %__MODULE__{text: List.wrap(text)}
 

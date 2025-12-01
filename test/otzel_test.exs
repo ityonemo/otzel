@@ -69,12 +69,6 @@ defmodule OtzelTest do
       assert Otzel.slice(delta, 0, 1) == [Otzel.insert("1")]
     end
 
-    @tag :skip
-    test "slice insert object with 0 index" do
-      delta = [Otzel.insert(%{"id" => "1"}), Otzel.insert(%{"id" => "2"})]
-      assert Otzel.slice(delta, 0, 1) == [Otzel.insert(%{"id" => "1"})]
-    end
-
     # ☹️ is 2 codepoints: ☹ + VS16
     test "slice emoji: codepoint + variation selector" do
       # "01☹️345"
@@ -135,32 +129,7 @@ defmodule OtzelTest do
     end
   end
 
-  describe ".split/3" do
-    @tag :skip
-    test "split at op boundary" do
-      # [
-      #  Otzel.insert("hello"),
-      #  Otzel.insert(%{"code-embed" => []}),
-      #  Otzel.insert("world")
-      # ]
-
-      # this splitter should split the delta immediately before the first embed
-      # assert Otzel.split(
-      #         delta,
-      #         {fn
-      #            Otzel.insert(text), _ when is_binary(text) -> :cont
-      #            _, _ -> 0
-      #          end, []}
-      #       ) ==
-      #         {[Otzel.insert("hello")],
-      #          [
-      #            Otzel.insert(%{"code-embed" => []}),
-      #            Otzel.insert("world")
-      #          ]}
-    end
-  end
-
-  test "regression" do
+test "regression" do
     t = [Otzel.insert(" ", %{"" => ""}), Otzel.insert(" ")]
     assert Otzel.take(t, 2) == t
   end

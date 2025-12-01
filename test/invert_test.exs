@@ -125,7 +125,6 @@ defmodule OtzelTest.InvertTest do
       assert base == base |> Otzel.compose(change) |> Otzel.compose(inverted)
     end
 
-    @tag :skip
     test "invert an embed change with numbers" do
       delta = [
         Otzel.retain(1),

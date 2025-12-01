@@ -47,6 +47,4 @@ defmodule OtzelTest.TransformIndexTest do
     assert Otzel.transform_index(4, delta) == 1
   end
 
-  @tag :skip
-  test "priority == :left"
 end
