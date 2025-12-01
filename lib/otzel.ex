@@ -1,7 +1,71 @@
 defmodule Otzel do
+  @moduledoc """
+  Otzel is an Elixir library for Operational Transformation (OT).
+
+  Operational Transformation is a technique for maintaining consistency in collaborative
+  editing systems. When multiple users edit a shared document simultaneously, OT ensures
+  that all users see the same final result regardless of the order in which edits are received.
+
+  ## The Delta Format
+
+  Otzel implements the [Delta format](https://quilljs.com/docs/delta/), representing documents
+  and changes as lists of operations. A delta is simply a list of `t:Otzel.Op.t/0` operations.
+
+  There are three types of operations:
+
+  - **Insert** (`Otzel.Op.Insert`) - Adds new content
+  - **Retain** (`Otzel.Op.Retain`) - Keeps existing content (optionally modifying attributes)
+  - **Delete** (`Otzel.Op.Delete`) - Removes content
+
+  ## Documents vs Changes
+
+  The same delta format represents both:
+
+  - **Documents**: Deltas consisting only of insert operations
+  - **Changes**: Deltas that may include retain and delete operations
+
+  ## Example Usage
+
+      # Create a document
+      doc = [Otzel.insert("Hello World")]
+
+      # Create a change that makes "World" bold
+      change = [Otzel.retain(6), Otzel.retain(5, %{"bold" => true})]
+
+      # Apply the change
+      new_doc = Otzel.compose(doc, change)
+
+  ## Core Operations
+
+  - `compose/2` - Combine two deltas into one
+  - `transform/3` - Adjust a delta for concurrent edits
+  - `invert/2` - Create an undo delta
+  - `diff/2` - Compute the delta between two documents
+
+  ## Configuration
+
+  The default string module can be configured:
+
+      config :otzel, :string_module, Otzel.Content.Iomemo
+
+  """
+
   alias Otzel.Op
 
+  @typedoc """
+  A delta is a list of operations representing a document or change.
+
+  Documents are deltas containing only insert operations.
+  Changes may contain insert, retain, and delete operations.
+  """
   @type t :: [Op.t()]
+
+  @typedoc """
+  Priority determines which concurrent operation "wins" during transformation.
+
+  - `:left` - The first operation has priority
+  - `:right` - The second operation has priority
+  """
   @type priority :: :left | :right
 
   alias Otzel.Attrs
@@ -170,6 +234,29 @@ defmodule Otzel do
   def seek([], _), do: []
 
   @spec compose(t, t) :: t
+  @doc """
+  Composes two deltas into a single delta with the same effect as applying them sequentially.
+
+  Given deltas A and B, `compose(A, B)` returns a delta C such that applying C to a document
+  has the same effect as applying A then B.
+
+  ## Examples
+
+      iex> doc = [Otzel.insert("Hello")]
+      iex> change = [Otzel.retain(5), Otzel.insert(" World")]
+      iex> result = Otzel.compose(doc, change)
+      iex> Otzel.json(result)
+      [%{"insert" => "Hello World"}]
+
+      iex> a = [Otzel.insert("abc")]
+      iex> b = [Otzel.retain(1), Otzel.delete(1), Otzel.retain(1)]
+      iex> Otzel.json(Otzel.compose(a, b))
+      [%{"insert" => "ac"}]
+
+  ## Properties
+
+  Compose is associative: `compose(compose(a, b), c) == compose(a, compose(b, c))`
+  """
   def compose(left, right) do
     compose(left, right, [])
   end
@@ -285,6 +372,27 @@ defmodule Otzel do
   defp push_inverted(_, [], so_far), do: so_far
 
   @spec transform_index(non_neg_integer, t, priority) :: non_neg_integer
+  @doc """
+  Transforms a cursor/selection index against a delta.
+
+  When a delta is applied to a document, cursor positions need to be adjusted.
+  This function computes where an index should move to after the delta is applied.
+
+  ## Parameters
+
+  - `index` - The original cursor position
+  - `delta` - The delta being applied
+  - `priority` - Whether the cursor should be pushed by inserts at the same position
+
+  ## Examples
+
+      iex> Otzel.transform_index(5, [Otzel.insert("abc")], :right)
+      8
+
+      iex> Otzel.transform_index(5, [Otzel.retain(3), Otzel.delete(2)], :right)
+      3
+
+  """
   def transform_index(left, right, priority \\ :right)
 
   def transform_index(index, right, priority) when is_integer(index) do
@@ -305,6 +413,40 @@ defmodule Otzel do
   end
 
   @spec transform(t, t, priority) :: t
+  @doc """
+  Transforms a delta against another concurrent delta.
+
+  When two users make edits concurrently, their deltas need to be transformed
+  against each other to maintain consistency. Given deltas A and B that were
+  created from the same base document:
+
+  - `transform(A, B, :right)` returns B' that can be applied after A
+  - `transform(B, A, :left)` returns A' that can be applied after B
+
+  The result satisfies: `compose(A, B') == compose(B, A')`
+
+  ## Parameters
+
+  - `from` - The delta that was applied first
+  - `into` - The delta to transform
+  - `priority` - Which delta wins when both insert at the same position
+
+  ## Examples
+
+      iex> a = [Otzel.insert("A")]
+      iex> b = [Otzel.insert("B")]
+      iex> Otzel.json(Otzel.transform(a, b, :right))
+      [%{"insert" => "B"}]
+
+  ## Priority
+
+  The priority parameter determines what happens when both deltas insert at
+  the same position:
+
+  - `:right` - The `into` delta's insert comes after
+  - `:left` - The `into` delta's insert comes before
+
+  """
   def transform(left, right, priority \\ :right), do: transform(left, right, priority, [])
 
   defp transform([], [], _, so_far), do: finalize(so_far, [])
@@ -632,6 +774,19 @@ defmodule Otzel do
     |> Enum.reduce(right, &push(&2, &1))
   end
 
+  @doc """
+  Parses a delta from JSON format.
+
+  Accepts a list of operation maps in the Quill Delta JSON format.
+
+  ## Examples
+
+      iex> json = [%{"insert" => "Hello"}, %{"insert" => " World", "attributes" => %{"bold" => true}}]
+      iex> delta = Otzel.from_json(json)
+      iex> length(delta)
+      2
+
+  """
   def from_json(json) when is_list(json) do
     Enum.map(json, &Op.from_json/1)
   end
@@ -849,6 +1004,19 @@ defmodule Otzel do
     Enum.map(document, fn %Insert{} = insert -> insert.content end)
   end
 
+  @doc """
+  Converts a delta to a JSON-compatible format.
+
+  Returns a list of maps in the Quill Delta JSON format, suitable for
+  serialization with `JSON.encode!/1` or transmission over the wire.
+
+  ## Examples
+
+      iex> delta = [Otzel.insert("Hello"), Otzel.insert(" World", %{"bold" => true})]
+      iex> Otzel.json(delta)
+      [%{"insert" => "Hello"}, %{"insert" => " World", "attributes" => %{"bold" => true}}]
+
+  """
   def json(src) do
     src
     |> JSON.encode!()

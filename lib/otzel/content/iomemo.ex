@@ -1,4 +1,42 @@
 defmodule Otzel.Content.Iomemo do
+  @moduledoc """
+  An efficient IO-list based string representation for OT operations.
+
+  Iomemo (IO-list with memoized length) stores strings as nested IO-lists
+  along with precomputed length information. This provides O(1) size lookups
+  and efficient splitting/concatenation operations that are common in OT.
+
+  ## Why IO-lists?
+
+  In collaborative editing, strings are frequently split and concatenated.
+  Standard Elixir strings require copying the entire string for these
+  operations. IO-lists allow structural sharing, making these operations
+  much more efficient for large documents.
+
+  ## Structure
+
+  - `:s` - The string data as an IO-list
+  - `:l` - Memoized length information matching the IO-list structure
+
+  ## Usage
+
+  Iomemo is the default string module. Strings are automatically converted:
+
+      # This creates an Iomemo internally
+      Otzel.insert("Hello World")
+
+  You can also create directly:
+
+      Otzel.Content.Iomemo.new("Hello World")
+
+  ## Configuration
+
+  To use standard strings instead:
+
+      config :otzel, :string_module, String
+
+  """
+
   use Otzel.Content
 
   alias Otzel.Op.Insert

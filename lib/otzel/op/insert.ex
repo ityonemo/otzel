@@ -1,4 +1,29 @@
 defmodule Otzel.Op.Insert do
+  @moduledoc """
+  An operation that inserts new content at the current position.
+
+  Insert operations are the building blocks of documents in the delta format.
+  A document is represented as a list of insert operations.
+
+  ## Fields
+
+  - `:content` - The content to insert (string or embedded content)
+  - `:attrs` - Optional map of formatting attributes
+
+  ## Examples
+
+      # Plain text insert
+      %Otzel.Op.Insert{content: "Hello", attrs: nil}
+
+      # Insert with formatting
+      %Otzel.Op.Insert{content: "Bold", attrs: %{"bold" => true}}
+
+      # Using helper function
+      Otzel.insert("Hello")
+      Otzel.insert("Bold", %{"bold" => true})
+
+  """
+
   use Otzel.Op
 
   @enforce_keys [:content]

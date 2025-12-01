@@ -1,4 +1,38 @@
 defmodule Otzel.Op.Retain do
+  @moduledoc """
+  An operation that keeps existing content, optionally modifying attributes.
+
+  Retain operations are used in changes (not documents) to indicate that
+  content should be preserved. They can also apply or remove formatting.
+
+  ## Fields
+
+  - `:target` - Number of characters to retain, or embedded content for nested OT
+  - `:attrs` - Optional map of attribute changes to apply
+
+  ## Attribute Behavior
+
+  - Setting an attribute to a value applies that formatting
+  - Setting an attribute to `nil` removes that formatting
+  - Attributes not mentioned are left unchanged
+
+  ## Examples
+
+      # Keep 5 characters unchanged
+      %Otzel.Op.Retain{target: 5, attrs: nil}
+
+      # Keep 5 characters and make them bold
+      %Otzel.Op.Retain{target: 5, attrs: %{"bold" => true}}
+
+      # Keep 5 characters and remove bold
+      %Otzel.Op.Retain{target: 5, attrs: %{"bold" => nil}}
+
+      # Using helper function
+      Otzel.retain(5)
+      Otzel.retain(5, %{"bold" => true})
+
+  """
+
   use Otzel.Op
 
   @enforce_keys [:target]

@@ -1,14 +1,63 @@
 use Protoss
 
 defprotocol Otzel.Op do
+  @moduledoc """
+  Protocol for delta operations.
+
+  An operation represents a single action in a delta. There are three operation types:
+
+  - `Otzel.Op.Insert` - Adds new content at the current position
+  - `Otzel.Op.Retain` - Keeps content, optionally modifying attributes
+  - `Otzel.Op.Delete` - Removes content at the current position
+
+  Operations implement this protocol to provide common behaviors like
+  merging adjacent operations, calculating size, and splitting operations.
+
+  ## Creating Operations
+
+  Use the helper functions in `Otzel`:
+
+      Otzel.insert("Hello")
+      Otzel.retain(5, %{"bold" => true})
+      Otzel.delete(3)
+
+  Or create structs directly:
+
+      %Otzel.Op.Insert{content: "Hello", attrs: nil}
+      %Otzel.Op.Retain{target: 5, attrs: %{"bold" => true}}
+      %Otzel.Op.Delete{count: 3}
+
+  """
+
   @type t :: Otzel.Op.Insert.t() | Otzel.Op.Retain.t() | Otzel.Op.Delete.t()
 
+  @doc """
+  Attempts to merge two adjacent operations into one.
+
+  Returns the merged operation if the operations can be combined,
+  or `nil` if they cannot be merged.
+
+  Operations can be merged when they are of the same type with
+  compatible attributes.
+  """
   @spec merge_into(t, t) :: t | nil
   def merge_into(op1, op2)
 
+  @doc """
+  Returns the size of an operation.
+
+  For inserts and retains, this is the character count of the content.
+  For deletes, this is the number of characters to delete.
+  """
   @spec size(t) :: non_neg_integer
   def size(operation)
 
+  @doc """
+  Splits an operation at the given position.
+
+  Returns a tuple of `{taken, rest}` where `taken` is the first `count`
+  units and `rest` is the remainder (or `nil` if nothing remains).
+  """
   @spec take(t, non_neg_integer) :: {t, t | nil}
   def take(operation, count)
 after
