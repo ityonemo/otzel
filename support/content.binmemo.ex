@@ -41,21 +41,7 @@ defmodule Otzel.Content.Binmemo do
     a_str = as_binary(a)
     b_str = as_binary(b)
 
-    a_str
-    |> :diffy.diff(b_str)
-    |> Enum.map(&from_diff_op/1)
-  end
-
-  defp from_diff_op({:insert, text}) do
-    %Otzel.Op.Insert{content: new(text)}
-  end
-
-  defp from_diff_op({:delete, text}) do
-    %Otzel.Op.Delete{count: Otzel._codepoints(text)}
-  end
-
-  defp from_diff_op({:equal, text}) do
-    %Otzel.Op.Retain{target: Otzel._codepoints(text)}
+    Otzel.Diff.diff(a_str, b_str, __MODULE__)
   end
 
   def concatenate(list) do

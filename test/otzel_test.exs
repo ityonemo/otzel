@@ -143,4 +143,27 @@ test "regression" do
     ot = [Otzel.insert("Hello", String), Otzel.insert("World", String)]
     assert [Otzel.insert("HelloWorld")] =~ Otzel.compact(ot)
   end
+
+  describe "Iomemo" do
+    alias Otzel.Content.Iomemo
+
+    test "to_string/1" do
+      iomemo = Iomemo.new("Hello World")
+      assert to_string(iomemo) == "Hello World"
+    end
+
+    test "to_string/1 with split content" do
+      iomemo = Iomemo.new("Hello World")
+      {left, right} = Otzel.Content.take(iomemo, 5)
+      assert to_string(left) == "Hello"
+      assert to_string(right) == " World"
+    end
+
+    test "to_string/1 with concatenated content" do
+      a = Iomemo.new("Hello")
+      b = Iomemo.new(" World")
+      combined = Otzel.Content.concatenate([a, b])
+      assert to_string(combined) == "Hello World"
+    end
+  end
 end

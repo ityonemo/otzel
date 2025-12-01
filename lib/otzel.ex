@@ -48,6 +48,13 @@ defmodule Otzel do
 
       config :otzel, :string_module, Otzel.Content.Iomemo
 
+  Available string modules:
+
+  - `Otzel.Content.Iomemo` (default) - Efficient IO-list based strings with O(1) size
+    lookups and structural sharing for split/concatenate operations
+  - `Otzel.Content.BitString` - Plain Elixir strings, simpler but less efficient for
+    large documents with frequent edits
+
   """
 
   alias Otzel.Op

@@ -1,8 +1,4 @@
 defimpl Otzel.Content, for: BitString do
-  alias Otzel.Op.Insert
-  alias Otzel.Op.Delete
-  alias Otzel.Op.Retain
-
   def new(string), do: string
 
   def size(string), do: Otzel._codepoints(string)
@@ -31,14 +27,8 @@ defimpl Otzel.Content, for: BitString do
   def invert(_, _), do: raise("unimplemented")
 
   def diff(a, b) do
-    a
-    |> :diffy.diff(b)
-    |> Enum.map(&from_diff_op/1)
+    Otzel.Diff.diff(a, b, __MODULE__)
   end
-
-  defp from_diff_op({:insert, text}), do: %Insert{content: text}
-  defp from_diff_op({:delete, text}), do: %Delete{count: Otzel._codepoints(text)}
-  defp from_diff_op({:equal, text}), do: %Retain{target: Otzel._codepoints(text)}
 
   def concatenate(contents), do: IO.iodata_to_binary(contents)
 end

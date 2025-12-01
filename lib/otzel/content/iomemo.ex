@@ -196,4 +196,8 @@ defmodule Otzel.Content.Iomemo do
       |> JSON.Encoder.encode(opts)
     end
   end
+
+  defimpl String.Chars do
+    def to_string(iodata), do: IO.iodata_to_binary(iodata.s)
+  end
 end
