@@ -549,9 +549,16 @@ defmodule Otzel do
   """
   @spec cleanup_semantic(t, Otzel.Content.t() | nil, list() | nil) :: t
   def cleanup_semantic(ops, dst_content \\ nil, dst_attrs_index \\ nil) do
-    ops
-    |> group_edit_sequences([])
-    |> Enum.flat_map(&simplify_edit_group(&1, dst_content, dst_attrs_index))
+    {result, _final_dst_pos} =
+      ops
+      |> group_edit_sequences([])
+      |> Enum.reduce({[], 0}, fn group, {acc, dst_pos} ->
+        {simplified, new_dst_pos} = simplify_edit_group(group, dst_content, dst_attrs_index, dst_pos)
+        {:lists.reverse(simplified, acc), new_dst_pos}
+      end)
+
+    result
+    |> :lists.reverse()
     |> compact()
   end
 
@@ -605,12 +612,21 @@ defmodule Otzel do
   end
 
   # Simplify an edit group: if the common text ratio is low, convert to delete-all + insert-all
-  defp simplify_edit_group({:retain, retain}, _dst_content, _dst_attrs_index), do: [retain]
+  # Returns {simplified_ops, end_dst_pos} to track position across groups
+  defp simplify_edit_group({:retain, %Retain{target: t} = retain}, _dst_content, _dst_attrs_index, dst_pos)
+       when is_integer(t) do
+    {[retain], dst_pos + t}
+  end
 
-  defp simplify_edit_group({:edit, ops}, dst_content, dst_attrs_index) do
+  defp simplify_edit_group({:retain, retain}, _dst_content, _dst_attrs_index, dst_pos) do
+    # Non-integer retain (embedded content) has size 1
+    {[retain], dst_pos + 1}
+  end
+
+  defp simplify_edit_group({:edit, ops}, dst_content, dst_attrs_index, start_dst_pos) do
     # Calculate total delete count, collect inserts, and track retain info
-    {delete_count, inserts_and_retains, _dst_pos} =
-      Enum.reduce(ops, {0, [], 0}, fn
+    {delete_count, inserts_and_retains, end_dst_pos} =
+      Enum.reduce(ops, {0, [], start_dst_pos}, fn
         %Delete{count: c}, {del, items, dst_pos} ->
           {del + c, items, dst_pos}
         %Insert{content: c} = i, {del, items, dst_pos} ->
@@ -645,10 +661,10 @@ defmodule Otzel do
     if retained_count <= threshold and delete_count > 0 and dst_content != nil do
       # Convert to: delete all, then insert all (converting retains to inserts)
       inserts = convert_retains_to_inserts(items, dst_content, dst_attrs_index)
-      [%Delete{count: delete_count} | merge_inserts(inserts)]
+      {[%Delete{count: delete_count} | merge_inserts(inserts)], end_dst_pos}
     else
       # Keep the original ops, but merge adjacent same-type operations
-      merge_adjacent_ops(ops)
+      {merge_adjacent_ops(ops), end_dst_pos}
     end
   end
 
