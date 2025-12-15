@@ -56,6 +56,15 @@ defmodule Otzel.Content.Iomemo do
           l: len_list | non_neg_integer
         }
 
+  @doc """
+  Creates a new Iomemo from a string or IO-list.
+
+  ## Examples
+
+      iex> Otzel.Content.Iomemo.new("Hello")
+      %Otzel.Content.Iomemo{s: "Hello", l: 5}
+
+  """
   def new(str), do: %__MODULE__{s: str, l: len_of(str)}
 
   def compose(left, right = %__MODULE__{}) do
@@ -156,6 +165,12 @@ defmodule Otzel.Content.Iomemo do
 
   def as_binary(iodata), do: IO.iodata_to_binary(iodata.s)
 
+  @doc """
+  Checks if the Iomemo's cached length is consistent with its content.
+
+  Returns `true` if the memoized length matches the actual content length.
+  Useful for debugging and validation.
+  """
   def well_formed?(iodata), do: consistent?(iodata.s, iodata.l)
 
   defp consistent?(string, length) when is_binary(string) do

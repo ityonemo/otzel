@@ -1,7 +1,7 @@
 defmodule Otzel.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
   @source_url "https://github.com/ityonemo/otzel"
 
   def project do
@@ -64,6 +64,7 @@ defmodule Otzel.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:ecto, "~> 3.0", optional: Mix.env() == :prod},
       {:protoss, "~> 1.1", runtime: false},
       {:zigler, "~> 0.15", runtime: false},
       {:diffy, "~> 1.1", only: :perf},

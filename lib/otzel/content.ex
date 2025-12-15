@@ -93,9 +93,21 @@ after
     end
   end
 
+  @doc """
+  Extracts the content from an operation.
+
+  For Insert operations, returns the content being inserted.
+  For Retain operations, returns the target (count or embedded content).
+  """
   def from(%Retain{} = op), do: op.target
   def from(%Insert{} = op), do: op.content
 
+  @doc """
+  Remaps Insert operations to use a specific string module.
+
+  Converts the content of each Insert operation to the given module's
+  representation (e.g., `String` or `Otzel.Content.Iomemo`).
+  """
   def remap_inserts(ops, module), do: Enum.map(ops, &remap_insert(&1, module))
 
   defp remap_insert(%Insert{} = insert, String) do
@@ -116,6 +128,12 @@ after
 
   defp remap_insert(op, _module), do: op
 
+  @doc """
+  Concatenates a list of content values into a single content value.
+
+  Delegates to the appropriate content module's `concatenate/1` function
+  based on the type of the first element.
+  """
   def concatenate(list = [%module{} | _]), do: module.concatenate(list)
   def concatenate(list = [head | _]) when is_binary(head), do: IO.iodata_to_binary(list)
 end

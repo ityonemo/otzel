@@ -1066,6 +1066,10 @@ defmodule Otzel do
 
   defp finalize([], forward), do: forward
 
+  # Counts the number of UTF-8 codepoints in a binary string.
+  # This is a low-level utility used internally for size calculations.
+  # It performs a single pass through the binary and assumes well-formed UTF-8.
+  @doc false
   def _codepoints(string), do: _codepoints(string, 0)
 
   defp _codepoints(<<_::utf8, rest::binary>>, count), do: _codepoints(rest, count + 1)
