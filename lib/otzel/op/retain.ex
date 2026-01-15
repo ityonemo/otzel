@@ -74,9 +74,23 @@ defmodule Otzel.Op.Retain do
   def take(retain, count) when count < retain.target,
     do: {%{retain | target: count}, %{retain | target: retain.target - count}}
 
-  def from_json(%{"retain" => target} = json) do
+  @embed_encoder Application.compile_env(:otzel, :embed_encoder)
+
+  def from_json(%{"retain" => target} = json, opts) do
+    embedded =
+      if is_map(target) do
+        if encoder = Keyword.get(opts, :embed_encoder, @embed_encoder) do
+          {mod, fun} = encoder
+          apply(mod, fun, [target])
+        else
+          target
+        end
+      else
+        target
+      end
+
     %__MODULE__{
-      target: target,
+      target: embedded,
       attrs: Map.get(json, "attributes")
     }
   end

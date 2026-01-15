@@ -66,7 +66,10 @@ defmodule Otzel.Op.Insert do
 
   def merge_into(%{content: c1, attrs: attrs}, %__MODULE__{content: c2, attrs: attrs})
       when matching(c1, c2) do
-    %__MODULE__{content: Content.merge_into(c1, c2), attrs: attrs}
+    case Content.merge_into(c1, c2) do
+      nil -> nil
+      merged -> %__MODULE__{content: merged, attrs: attrs}
+    end
   end
 
   def merge_into(_, _), do: nil
@@ -106,8 +109,16 @@ defmodule Otzel.Op.Insert do
     end)
   end
 
-  def from_json(%{"insert" => content} = json) do
-    %__MODULE__{content: content, attrs: Map.get(json, "attributes")}
+  @embed_encoder Application.compile_env(:otzel, :embed_encoder)
+
+  def from_json(%{"insert" => content} = json, opts) do
+    embedded = if encoder = Keyword.get(opts, :embed_encoder, @embed_encoder) do
+      {mod, fun} = encoder
+      apply(mod, fun, [content])
+    else
+      content
+    end
+    %__MODULE__{content: embedded, attrs: Map.get(json, "attributes")}
   end
 end
 

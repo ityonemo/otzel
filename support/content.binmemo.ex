@@ -36,6 +36,7 @@ defmodule Otzel.Content.Binmemo do
   def invert(_, _), do: raise("unimplemented")
 
   def as_binary(s), do: s.s
+  def embed?(_), do: false
 
   def diff(a, b) do
     a_str = as_binary(a)

@@ -176,9 +176,11 @@ after
     end
   end
 
-  def from_json(%{"insert" => _} = json), do: Insert.from_json(json)
+  def from_json(json, opts \\ [])
 
-  def from_json(%{"retain" => _} = json), do: Retain.from_json(json)
+  def from_json(%{"insert" => _} = json, opts), do: Insert.from_json(json, opts)
 
-  def from_json(%{"delete" => _} = json), do: Delete.from_json(json)
+  def from_json(%{"retain" => _} = json, opts), do: Retain.from_json(json, opts)
+
+  def from_json(%{"delete" => _} = json, opts), do: Delete.from_json(json, opts)
 end

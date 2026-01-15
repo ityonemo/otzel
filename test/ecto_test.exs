@@ -50,11 +50,17 @@ defmodule OtzelTest.EctoTest do
   end
 
   describe "dump/1" do
-    test "dumps Otzel operations to JSON-compatible maps" do
+    test "dumps Otzel operations (Postgrex handles JSON encoding)" do
       delta = [Otzel.insert("Hello"), Otzel.insert(" World", %{"bold" => true})]
 
       assert {:ok, data} = Delta.dump(delta)
-      assert [%{"insert" => "Hello"}, %{"insert" => " World", "attributes" => %{"bold" => true}}] = data
+      # dump returns structs directly; Postgrex uses JSON.Encoder to serialize
+      assert data == delta
+      # Verify JSON encoding produces expected format
+      assert JSON.decode!(JSON.encode!(data)) == [
+        %{"insert" => "Hello"},
+        %{"insert" => " World", "attributes" => %{"bold" => true}}
+      ]
     end
 
     test "dumps an empty list" do
@@ -68,7 +74,7 @@ defmodule OtzelTest.EctoTest do
   end
 
   describe "round-trip" do
-    test "dump then load preserves delta" do
+    test "dump then load preserves delta (simulating database round-trip)" do
       delta = [
         Otzel.insert("Hello "),
         Otzel.insert("World", %{"bold" => true}),
@@ -77,10 +83,12 @@ defmodule OtzelTest.EctoTest do
       ]
 
       {:ok, dumped} = Delta.dump(delta)
-      {:ok, loaded} = Delta.load(dumped)
+      # Simulate what Postgrex does: JSON encode on write, decode on read
+      db_representation = dumped |> JSON.encode!() |> JSON.decode!()
+      {:ok, loaded} = Delta.load(db_representation)
 
       # Compare JSON representations since internal struct types may differ
-      assert Otzel.json(delta) == Otzel.json(loaded)
+      assert JSON.encode!(delta) == JSON.encode!(loaded)
     end
   end
 

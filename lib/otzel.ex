@@ -252,12 +252,12 @@ defmodule Otzel do
       iex> doc = [Otzel.insert("Hello")]
       iex> change = [Otzel.retain(5), Otzel.insert(" World")]
       iex> result = Otzel.compose(doc, change)
-      iex> Otzel.json(result)
+      iex> result |> JSON.encode!() |> JSON.decode!()
       [%{"insert" => "Hello World"}]
 
       iex> a = [Otzel.insert("abc")]
       iex> b = [Otzel.retain(1), Otzel.delete(1), Otzel.retain(1)]
-      iex> Otzel.json(Otzel.compose(a, b))
+      iex> Otzel.compose(a, b) |> JSON.encode!() |> JSON.decode!()
       [%{"insert" => "ac"}]
 
   ## Properties
@@ -343,6 +343,15 @@ defmodule Otzel do
         # custom embeds with size > 1 are supported and there is an instruction mismatch)
         {[base_op], rest_base} = split(base, count)
         base_embed = Content.from(base_op)
+
+        # Embedded retain requires embedded base content (not string)
+        if not Content.embed?(base_embed) do
+          raise Otzel.ContentError,
+            message: "cannot retain a string with embedded content",
+            operation: :invert,
+            expected: "embedded content (struct)",
+            got: "string"
+        end
 
         inverted = %Retain{
           target: Content.invert(head.target, base_embed),
@@ -442,7 +451,7 @@ defmodule Otzel do
 
       iex> a = [Otzel.insert("A")]
       iex> b = [Otzel.insert("B")]
-      iex> Otzel.json(Otzel.transform(a, b, :right))
+      iex> Otzel.transform(a, b, :right) |> JSON.encode!() |> JSON.decode!()
       [%{"insert" => "B"}]
 
   ## Priority
@@ -508,7 +517,7 @@ defmodule Otzel do
 
   ```elixir
   iex> delta = [Otzel.insert("Hel"), Otzel.insert("lo"), Otzel.insert("World", %{"bold" => true})]
-  iex> Otzel.json(Otzel.compact(delta))
+  iex> Otzel.compact(delta) |> JSON.encode!() |> JSON.decode!()
   [%{"insert" => "Hello"}, %{"insert" => "World", "attributes" => %{"bold" => true}}]
   ```
   """
@@ -773,9 +782,11 @@ defmodule Otzel do
     merge_adjacent_ops([%Delete{count: c1 + c2} | rest])
   end
 
-  defp merge_adjacent_ops([%Insert{attrs: attrs, content: c1}, %Insert{attrs: attrs, content: c2} | rest]) do
-    merged = Content.merge_into(c1, c2)
-    merge_adjacent_ops([%Insert{content: merged, attrs: attrs} | rest])
+  defp merge_adjacent_ops([%Insert{attrs: attrs, content: c1} = op1, %Insert{attrs: attrs, content: c2} = op2 | rest]) do
+    case Content.merge_into(c1, c2) do
+      nil -> [op1 | merge_adjacent_ops([op2 | rest])]
+      merged -> merge_adjacent_ops([%Insert{content: merged, attrs: attrs} | rest])
+    end
   end
 
   defp merge_adjacent_ops([first | rest]) do
@@ -787,7 +798,7 @@ defmodule Otzel do
   Concatenates two transformations into one
 
   ```elixir
-  iex> Otzel.json(Otzel.concat([Otzel.insert("Hel")], [Otzel.insert("lo")]))
+  iex> Otzel.concat([Otzel.insert("Hel")], [Otzel.insert("lo")]) |> JSON.encode!() |> JSON.decode!()
   [%{"insert" => "Hello"}]
   ```
   """
@@ -802,6 +813,12 @@ defmodule Otzel do
 
   Accepts a list of operation maps in the Quill Delta JSON format.
 
+  ## Options
+
+    * `:embed_encoder` - A `{module, function}` tuple that will be called with
+      the raw content to convert embedded content back to structs. The function
+      should return the appropriate struct or pass through the content unchanged.
+
   ## Examples
 
       iex> json = [%{"insert" => "Hello"}, %{"insert" => " World", "attributes" => %{"bold" => true}}]
@@ -810,8 +827,8 @@ defmodule Otzel do
       2
 
   """
-  def from_json(json) when is_list(json) do
-    Enum.map(json, &Op.from_json/1)
+  def from_json(json, opts \\ []) when is_list(json) do
+    Enum.map(json, &Op.from_json(&1, opts))
   end
 
   @string_module Application.compile_env(:otzel, :string_module, Otzel.Content.Iomemo)
@@ -1044,25 +1061,6 @@ defmodule Otzel do
 
   defp to_content_list(document) do
     Enum.map(document, fn %Insert{} = insert -> insert.content end)
-  end
-
-  @doc """
-  Converts a delta to a JSON-compatible format.
-
-  Returns a list of maps in the Quill Delta JSON format, suitable for
-  serialization with `JSON.encode!/1` or transmission over the wire.
-
-  ## Examples
-
-      iex> delta = [Otzel.insert("Hello"), Otzel.insert(" World", %{"bold" => true})]
-      iex> Otzel.json(delta)
-      [%{"insert" => "Hello"}, %{"insert" => " World", "attributes" => %{"bold" => true}}]
-
-  """
-  def json(src) do
-    src
-    |> JSON.encode!()
-    |> JSON.decode!()
   end
 
   # generically useful utilities

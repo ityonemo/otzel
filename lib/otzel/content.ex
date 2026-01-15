@@ -34,7 +34,16 @@ defprotocol Otzel.Content do
   - `take/2` - Returns the whole content
   - `merge_into/2` - Returns nil (cannot merge)
   - `as_binary/1` - Returns nil
+  - `embed?/1` - Returns true (is embedded content)
   - `diff/2` - Returns empty list for equal content, or delete+insert for different content
+
+  ## Checking Content Type
+
+  Use `embed?/1` to check if content is an embedded type (returns `true`) or
+  string-like (returns `false`):
+
+      Otzel.Content.embed?(string_content)  # => false
+      Otzel.Content.embed?(embed_content)   # => true
 
   """
 
@@ -69,6 +78,10 @@ defprotocol Otzel.Content do
   @doc "Converts content to a binary string, or nil if not applicable"
   @spec as_binary(t) :: binary | nil
   def as_binary(content)
+
+  @doc "Returns true if the content is an embedded type (not string-like)"
+  @spec embed?(t) :: boolean
+  def embed?(content)
 after
   alias Otzel.Op.Insert
   alias Otzel.Op.Retain
@@ -80,6 +93,7 @@ after
         def take(op, _count), do: {op, nil}
         def merge_into(_, _), do: nil
         def as_binary(_), do: nil
+        def embed?(_), do: true
         def concatenate([single]), do: single
 
         def diff(a, b) when a == b, do: []

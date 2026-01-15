@@ -73,7 +73,7 @@ unless Application.compile_env(:otzel, :no_ecto) do
     def load(_), do: :error
 
     @impl true
-    def dump(delta) when is_list(delta), do: {:ok, Otzel.json(delta)}
+    def dump(delta) when is_list(delta), do: {:ok, delta}
     def dump(_), do: :error
 
     @impl true

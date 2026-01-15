@@ -164,6 +164,7 @@ defmodule Otzel.Content.Iomemo do
   defp count_of({integer, _list}), do: integer
 
   def as_binary(iodata), do: IO.iodata_to_binary(iodata.s)
+  def embed?(_), do: false
 
   @doc """
   Checks if the Iomemo's cached length is consistent with its content.

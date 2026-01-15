@@ -44,7 +44,7 @@ defmodule Otzel.Op.Delete do
   def take(delete, count) when count < delete.count,
     do: {%{delete | count: count}, %{delete | count: delete.count - count}}
 
-  def from_json(%{"delete" => count}) do
+  def from_json(%{"delete" => count}, _opts) do
     %__MODULE__{count: count}
   end
 end

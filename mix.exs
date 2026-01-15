@@ -1,7 +1,7 @@
 defmodule Otzel.MixProject do
   use Mix.Project
 
-  @version "0.2.1"
+  @version "0.3.0"
   @source_url "https://github.com/ityonemo/otzel"
 
   def project do
@@ -66,7 +66,6 @@ defmodule Otzel.MixProject do
     [
       {:ecto, "~> 3.0", optional: Mix.env() == :prod},
       {:protoss, "~> 1.1", runtime: false},
-      {:zigler, "~> 0.15", runtime: false},
       {:diffy, "~> 1.1", only: :perf},
       {:stream_data, "~> 1.0", only: [:test, :perf]},
       {:delta, "> 0.0.0", only: :perf},

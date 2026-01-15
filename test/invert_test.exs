@@ -102,7 +102,6 @@ defmodule OtzelTest.InvertTest do
   end
 
   describe ".invert/2 (custom embeds)" do
-    @describetag :skip
     @describetag custom_embeds: [TestEmbed]
 
     test "invert a normal change" do
@@ -196,6 +195,19 @@ defmodule OtzelTest.InvertTest do
 
       base |> Otzel.compose(delta)
       assert base =~ base |> Otzel.compose(delta) |> Otzel.compose(inverted)
+    end
+  end
+
+  describe ".invert/2 (error cases)" do
+    test "raises ContentError when inverting embed retain against string base" do
+      # Trying to invert a retain-with-embed against a base with plain string
+      # should raise a clear error
+      delta = [Otzel.retain(Op.embed(Otzel.insert("a")))]
+      base = [Otzel.insert("a")]
+
+      assert_raise Otzel.ContentError, ~r/cannot retain a string/, fn ->
+        Otzel.invert(delta, base)
+      end
     end
   end
 

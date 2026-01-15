@@ -17,6 +17,7 @@ defimpl Otzel.Content, for: BitString do
   end
 
   def as_binary(string), do: string
+  def embed?(_), do: false
 
   def compose(_, _), do: raise("unimplemented")
 

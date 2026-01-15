@@ -24,7 +24,7 @@ Add `otzel` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:otzel, "~> 0.1.0"}
+    {:otzel, "~> 0.3.0"}
   ]
 end
 ```
@@ -160,12 +160,12 @@ delta = [
   Otzel.insert("World", %{"bold" => true})
 ]
 
-# Convert to JSON-compatible format
-json = Otzel.json(delta)
-# [%{"insert" => "Hello "}, %{"insert" => "World", "attributes" => %{"bold" => true}}]
+# Convert to JSON string
+json_string = JSON.encode!(delta)
+# "[{\"insert\":\"Hello \"},{\"insert\":\"World\",\"attributes\":{\"bold\":true}}]"
 
 # Parse from JSON
-parsed = Otzel.from_json(json)
+parsed = json_string |> JSON.decode!() |> Otzel.from_json()
 ```
 
 ### Working with Attributes
@@ -199,8 +199,62 @@ defmodule MyApp.ImageEmbed do
 
   defstruct [:url, :width, :height]
 
-  # Implement required callbacks...
+  # Required callbacks for OT operations
+  def compose(_, _), do: raise "not implemented"
+  def transform(_, _, _), do: raise "not implemented"
+  def invert(_, _), do: raise "not implemented"
 end
+```
+
+#### Checking Content Type
+
+Use `Otzel.Content.embed?/1` to check if content is an embedded type vs string-like:
+
+```elixir
+string_content = %Otzel.Content.Iomemo{s: "hello", l: 5}
+embed_content = %Otzel.Content.Ot{transform: [Otzel.insert("nested")]}
+
+Otzel.Content.embed?(string_content)  # => false
+Otzel.Content.embed?(embed_content)   # => true
+```
+
+#### JSON Deserialization with Custom Embeds
+
+When deserializing JSON that contains embedded content, use the `:embed_encoder` option to convert JSON maps back to your embed structs:
+
+```elixir
+# Define an encoder function
+defmodule MyApp.EmbedEncoder do
+  def decode(%{"image" => url}) do
+    %MyApp.ImageEmbed{url: url}
+  end
+
+  def decode(%{"embed" => ops}) when is_list(ops) do
+    %Otzel.Content.Ot{transform: Otzel.from_json(ops)}
+  end
+
+  def decode(other), do: other  # Pass through unknown content
+end
+
+# Use at runtime
+json = [%{"insert" => %{"image" => "photo.jpg"}}]
+Otzel.from_json(json, embed_encoder: {MyApp.EmbedEncoder, :decode})
+
+# Or configure globally in config.exs
+config :otzel, :embed_encoder, {MyApp.EmbedEncoder, :decode}
+```
+
+#### Error Handling
+
+`Otzel.ContentError` is raised when there's a type mismatch between content types:
+
+```elixir
+# This raises ContentError - can't invert an embedded retain against string content
+delta = [Otzel.retain(%Otzel.Content.Ot{transform: [Otzel.insert("a")]})]
+base = [Otzel.insert("a")]
+
+Otzel.invert(delta, base)
+# ** (Otzel.ContentError) cannot retain a string with embedded content
 ```
 
 ## Architecture
@@ -216,6 +270,7 @@ end
 - **`Otzel.Content.Iomemo`** - Efficient IO-list based string representation
 - **`Otzel.Content.Ot`** - Nested OT content for embeds
 - **`Otzel.Attrs`** - Attribute manipulation utilities
+- **`Otzel.ContentError`** - Exception for content type mismatches
 
 ### String Representation
 
