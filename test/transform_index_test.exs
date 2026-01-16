@@ -46,5 +46,4 @@ defmodule OtzelTest.TransformIndexTest do
     delta = [Otzel.delete(1), Otzel.retain(1), Otzel.delete(4)]
     assert Otzel.transform_index(4, delta) == 1
   end
-
 end

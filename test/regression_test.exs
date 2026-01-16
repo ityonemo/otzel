@@ -19,10 +19,36 @@ defmodule Otzel.RegressionTest do
     test "invert inverts - property test regression" do
       # Full values from property test failure with seed 496357
       base = [
-        %Otzel.Op.Insert{content: %Otzel.Content.Iomemo{s: ">,p<\"jlaV:aHD[6\\`bGsMu>=pT", l: 26}, attrs: nil},
-        %Otzel.Op.Insert{content: %Otzel.Content.Iomemo{s: [[["m{^$7z+&v$0t=~8\"2!!.Q}=_+Npo(n82_<vp-bCQ3CVC", "~{QxxPQVWCk*gUR'KYVE-X*wk" | "􊪽𣯿"] | "{)Vj`\"!!3T"], ["6yS+(n07j" | "a@zT=4Xy~+\"u;`~w<~U3am34VTLiA&czMOK!"], ["]_c1pmLmIlV_fCZg= " | "򘞛񲁲򻔳򭫾򰨏󪄟"], "p$Ok@:tdAQ" | "8gXhARG:!<z7^N<bttn"], l: {179, [{81, [{71, [44, 25 | 2]} | 10]}, {45, [9 | 36]}, {24, [18 | 6]}, 10 | 19]}}, attrs: %{"X2VXZgGUviSHKWLWg" => "RZnISZvlYGtUZhPZljCW"}},
-        %Otzel.Op.Insert{content: %Otzel.Content.Iomemo{s: "< #E4H*\\", l: 8}, attrs: %{"aVSL8X7H" => "95FmQu"}},
-        %Otzel.Op.Insert{content: %Otzel.Content.Iomemo{s: ["󨠈𔳡󑍚𷼯򠃃񨪮𢁑񦰰" | ">puO_'"], l: {14, [8 | 6]}}, attrs: %{"MP" => "mHQspwX1YyM5fa"}}
+        %Otzel.Op.Insert{
+          content: %Otzel.Content.Iomemo{s: ">,p<\"jlaV:aHD[6\\`bGsMu>=pT", l: 26},
+          attrs: nil
+        },
+        %Otzel.Op.Insert{
+          content: %Otzel.Content.Iomemo{
+            s: [
+              [
+                [
+                  "m{^$7z+&v$0t=~8\"2!!.Q}=_+Npo(n82_<vp-bCQ3CVC",
+                  "~{QxxPQVWCk*gUR'KYVE-X*wk" | "􊪽𣯿"
+                ]
+                | "{)Vj`\"!!3T"
+              ],
+              ["6yS+(n07j" | "a@zT=4Xy~+\"u;`~w<~U3am34VTLiA&czMOK!"],
+              ["]_c1pmLmIlV_fCZg= " | "򘞛񲁲򻔳򭫾򰨏󪄟"],
+              "p$Ok@:tdAQ" | "8gXhARG:!<z7^N<bttn"
+            ],
+            l: {179, [{81, [{71, [44, 25 | 2]} | 10]}, {45, [9 | 36]}, {24, [18 | 6]}, 10 | 19]}
+          },
+          attrs: %{"X2VXZgGUviSHKWLWg" => "RZnISZvlYGtUZhPZljCW"}
+        },
+        %Otzel.Op.Insert{
+          content: %Otzel.Content.Iomemo{s: "< #E4H*\\", l: 8},
+          attrs: %{"aVSL8X7H" => "95FmQu"}
+        },
+        %Otzel.Op.Insert{
+          content: %Otzel.Content.Iomemo{s: ["󨠈𔳡󑍚𷼯򠃃񨪮𢁑񦰰" | ">puO_'"], l: {14, [8 | 6]}},
+          attrs: %{"MP" => "mHQspwX1YyM5fa"}
+        }
       ]
 
       change = [

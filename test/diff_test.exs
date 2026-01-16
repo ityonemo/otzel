@@ -281,6 +281,7 @@ defmodule OtzelTest.DiffTest do
       %Otzel.Op.Insert{content: Iomemo.new("T2z|_s`[s3rt>.LlL"), attrs: nil},
       %Otzel.Op.Insert{content: Iomemo.new("hello"), attrs: %{"u" => "PTdwQsV"}}
     ]
+
     text_b = [%Otzel.Op.Insert{content: Iomemo.new("Bki"), attrs: nil}]
 
     diff = Otzel.diff(text_a, text_b)
@@ -296,17 +297,39 @@ defmodule OtzelTest.DiffTest do
 
     # Exact case from property test with seed 320798
     text_a = [
-      %Otzel.Op.Insert{content: %Iomemo{s: ["T2z|_s`[s3r" | "t>.LlL"], l: {17, [11 | 6]}}, attrs: nil},
+      %Otzel.Op.Insert{
+        content: %Iomemo{s: ["T2z|_s`[s3r" | "t>.LlL"], l: {17, [11 | 6]}},
+        attrs: nil
+      },
       %Otzel.Op.Insert{content: %Iomemo{s: "𐨃򟍾𧙝񼈞𭉃", l: 5}, attrs: %{"u" => "PTdwQsV"}},
       %Otzel.Op.Insert{content: %Iomemo{s: "t", l: 1}, attrs: %{"kUS" => "ce"}},
-      %Otzel.Op.Insert{content: %Iomemo{s: [["l ,fs:D" | " d"] | "z"], l: {10, [{9, [7 | 2]} | 1]}}, attrs: %{"6j6tw8OwURE" => "OYo"}},
+      %Otzel.Op.Insert{
+        content: %Iomemo{s: [["l ,fs:D" | " d"] | "z"], l: {10, [{9, [7 | 2]} | 1]}},
+        attrs: %{"6j6tw8OwURE" => "OYo"}
+      },
       %Otzel.Op.Insert{content: %Iomemo{s: "Y[Wif6!.@b{C", l: 12}, attrs: nil},
       %Otzel.Op.Insert{content: %Iomemo{s: "taG`V%yZjNu", l: 11}, attrs: %{"n" => "hoqH"}},
-      %Otzel.Op.Insert{content: %Iomemo{s: [["@x" | "Thm-/6G"], "kKh[?S<A\\h" | ">[4L*qRD"], l: {27, [{9, [2 | 7]}, 10 | 8]}}, attrs: %{"uxnjW8cL" => ""}},
+      %Otzel.Op.Insert{
+        content: %Iomemo{
+          s: [["@x" | "Thm-/6G"], "kKh[?S<A\\h" | ">[4L*qRD"],
+          l: {27, [{9, [2 | 7]}, 10 | 8]}
+        },
+        attrs: %{"uxnjW8cL" => ""}
+      },
       %Otzel.Op.Insert{content: %Iomemo{s: ">Q{Jq6d", l: 7}, attrs: nil},
       %Otzel.Op.Insert{content: %Iomemo{s: "\\|OW,dmi ~`", l: 11}, attrs: nil},
       %Otzel.Op.Insert{content: %Iomemo{s: "me|Bp7H", l: 7}, attrs: %{"" => "USBQgeWS"}},
-      %Otzel.Op.Insert{content: %Iomemo{s: [[["P!{\"^nU?V-e-m" | "><eB/AK}AM+"], "ocI7^']TMWS+" | "a4a.T\"rOAX8)"], "Neo>T7Y-BA", "Uc]7&y\\6-c)it" | "򦆝󲌷򌝶󡭟񺂂񈗃񏤰󄝉"], l: {79, [{48, [{24, [13 | 11]}, 12 | 12]}, 10, 13 | 8]}}, attrs: nil},
+      %Otzel.Op.Insert{
+        content: %Iomemo{
+          s: [
+            [["P!{\"^nU?V-e-m" | "><eB/AK}AM+"], "ocI7^']TMWS+" | "a4a.T\"rOAX8)"],
+            "Neo>T7Y-BA",
+            "Uc]7&y\\6-c)it" | "򦆝󲌷򌝶󡭟񺂂񈗃񏤰󄝉"
+          ],
+          l: {79, [{48, [{24, [13 | 11]}, 12 | 12]}, 10, 13 | 8]}
+        },
+        attrs: nil
+      },
       %Otzel.Op.Insert{content: %Iomemo{s: "%T79+g<PSEl", l: 11}, attrs: nil}
     ]
 

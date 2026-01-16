@@ -21,7 +21,8 @@ defmodule OtzelTest.EctoTest do
 
     test "casts a JSON string" do
       json = ~s([{"insert": "Hello"}])
-      assert {:ok, [%Otzel.Op.Insert{content: "Hello", attrs: nil}]} = Delta.cast(json)
+      assert {:ok, [insert]} = Delta.cast(json)
+      assert insert == Otzel.insert("Hello")
     end
 
     test "returns error for invalid input" do
@@ -36,7 +37,8 @@ defmodule OtzelTest.EctoTest do
       data = [%{"insert" => "Hello"}, %{"insert" => " World", "attributes" => %{"bold" => true}}]
 
       assert {:ok, delta} = Delta.load(data)
-      assert [%Otzel.Op.Insert{content: "Hello"}, %Otzel.Op.Insert{attrs: %{"bold" => true}}] = delta
+
+      assert delta == [Otzel.insert("Hello"), Otzel.insert(" World", %{"bold" => true})]
     end
 
     test "loads an empty list" do
@@ -58,9 +60,9 @@ defmodule OtzelTest.EctoTest do
       assert data == delta
       # Verify JSON encoding produces expected format
       assert JSON.decode!(JSON.encode!(data)) == [
-        %{"insert" => "Hello"},
-        %{"insert" => " World", "attributes" => %{"bold" => true}}
-      ]
+               %{"insert" => "Hello"},
+               %{"insert" => " World", "attributes" => %{"bold" => true}}
+             ]
     end
 
     test "dumps an empty list" do

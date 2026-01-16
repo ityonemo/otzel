@@ -562,7 +562,9 @@ defmodule Otzel do
       ops
       |> group_edit_sequences([])
       |> Enum.reduce({[], 0}, fn group, {acc, dst_pos} ->
-        {simplified, new_dst_pos} = simplify_edit_group(group, dst_content, dst_attrs_index, dst_pos)
+        {simplified, new_dst_pos} =
+          simplify_edit_group(group, dst_content, dst_attrs_index, dst_pos)
+
         {:lists.reverse(simplified, acc), new_dst_pos}
       end)
 
@@ -622,7 +624,12 @@ defmodule Otzel do
 
   # Simplify an edit group: if the common text ratio is low, convert to delete-all + insert-all
   # Returns {simplified_ops, end_dst_pos} to track position across groups
-  defp simplify_edit_group({:retain, %Retain{target: t} = retain}, _dst_content, _dst_attrs_index, dst_pos)
+  defp simplify_edit_group(
+         {:retain, %Retain{target: t} = retain},
+         _dst_content,
+         _dst_attrs_index,
+         dst_pos
+       )
        when is_integer(t) do
     {[retain], dst_pos + t}
   end
@@ -638,10 +645,13 @@ defmodule Otzel do
       Enum.reduce(ops, {0, [], start_dst_pos}, fn
         %Delete{count: c}, {del, items, dst_pos} ->
           {del + c, items, dst_pos}
+
         %Insert{content: c} = i, {del, items, dst_pos} ->
           {del, [{:insert, i} | items], dst_pos + Content.size(c)}
+
         %Retain{target: t, attrs: attrs}, {del, items, dst_pos} when is_integer(t) ->
           {del + t, [{:retain, t, attrs, dst_pos} | items], dst_pos + t}
+
         other, {del, items, dst_pos} ->
           {del, [{:other, other} | items], dst_pos + 1}
       end)
@@ -665,7 +675,8 @@ defmodule Otzel do
 
     # If retained content is less than 20% of the total edit size, simplify
     total_edit_size = delete_count + insert_size - retained_count
-    threshold = div(total_edit_size, 5)  # 20%
+    # 20%
+    threshold = div(total_edit_size, 5)
 
     if retained_count <= threshold and delete_count > 0 and dst_content != nil do
       # Convert to: delete all, then insert all (converting retains to inserts)
@@ -681,7 +692,9 @@ defmodule Otzel do
   # Uses dst_attrs_index to look up actual destination attributes
   defp convert_retains_to_inserts(items, dst_content, dst_attrs_index) do
     Enum.map(items, fn
-      {:insert, insert} -> insert
+      {:insert, insert} ->
+        insert
+
       {:retain, count, _diff_attrs, dst_pos} ->
         # Extract content from destination at this position
         {_, rest} = Content.take(dst_content, dst_pos)
@@ -689,14 +702,20 @@ defmodule Otzel do
         # Look up actual destination attrs instead of using diff attrs
         dst_attrs = lookup_attrs_at(dst_attrs_index, dst_pos)
         %Insert{content: content, attrs: dst_attrs}
-      {:other, other} -> other
+
+      {:other, other} ->
+        other
     end)
   end
 
   # Look up attributes at a given position in the attrs index
   defp lookup_attrs_at(nil, _pos), do: nil
   defp lookup_attrs_at([], _pos), do: nil
-  defp lookup_attrs_at([{start, end_pos, attrs} | _rest], pos) when pos >= start and pos < end_pos, do: attrs
+
+  defp lookup_attrs_at([{start, end_pos, attrs} | _rest], pos)
+       when pos >= start and pos < end_pos,
+       do: attrs
+
   defp lookup_attrs_at([_ | rest], pos), do: lookup_attrs_at(rest, pos)
 
   # Merge adjacent inserts with compatible attributes
@@ -705,10 +724,11 @@ defmodule Otzel do
   defp merge_inserts([single]), do: [single]
 
   defp merge_inserts([%Insert{attrs: attrs1} = first | rest]) do
-    {compatible, different} = Enum.split_while(rest, fn
-      %Insert{attrs: attrs2} -> attrs_compatible?(attrs1, attrs2)
-      _ -> false
-    end)
+    {compatible, different} =
+      Enum.split_while(rest, fn
+        %Insert{attrs: attrs2} -> attrs_compatible?(attrs1, attrs2)
+        _ -> false
+      end)
 
     if compatible == [] do
       [first | merge_inserts(rest)]
@@ -748,6 +768,7 @@ defmodule Otzel do
   end
 
   defp all_values_nil?(nil), do: true
+
   defp all_values_nil?(attrs) when is_map(attrs) do
     Enum.all?(attrs, fn {_, v} -> v == nil end)
   end
@@ -782,7 +803,10 @@ defmodule Otzel do
     merge_adjacent_ops([%Delete{count: c1 + c2} | rest])
   end
 
-  defp merge_adjacent_ops([%Insert{attrs: attrs, content: c1} = op1, %Insert{attrs: attrs, content: c2} = op2 | rest]) do
+  defp merge_adjacent_ops([
+         %Insert{attrs: attrs, content: c1} = op1,
+         %Insert{attrs: attrs, content: c2} = op2 | rest
+       ]) do
     case Content.merge_into(c1, c2) do
       nil -> [op1 | merge_adjacent_ops([op2 | rest])]
       merged -> merge_adjacent_ops([%Insert{content: merged, attrs: attrs} | rest])
@@ -939,7 +963,9 @@ defmodule Otzel do
 
         %Retain{target: target}, {acc, src_pos, dst_pos} when is_integer(target) ->
           # Split the retain at attribute boundaries, computing attr diffs
-          split_retains = split_retain_by_attrs(target, src_pos, dst_pos, src_attrs_index, dst_attrs_index)
+          split_retains =
+            split_retain_by_attrs(target, src_pos, dst_pos, src_attrs_index, dst_attrs_index)
+
           {Enum.reverse(split_retains) ++ acc, src_pos + target, dst_pos + target}
 
         %Retain{} = retain, {acc, src_pos, dst_pos} ->

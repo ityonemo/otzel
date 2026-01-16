@@ -10,6 +10,7 @@ defmodule OtzelTest.Content.IomemoTest do
   # Helper to split by codepoints instead of graphemes
   defp codepoint_split_at(string, count) do
     codepoints = String.codepoints(string)
+
     {Enum.take(codepoints, count) |> IO.iodata_to_binary(),
      Enum.drop(codepoints, count) |> IO.iodata_to_binary()}
   end

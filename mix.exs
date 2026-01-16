@@ -53,7 +53,8 @@ defmodule Otzel.MixProject do
   defp aliases do
     [
       test: "test --preload-modules",
-      tidewave: "run --no-halt -e 'Agent.start(fn -> Bandit.start_link(plug: Tidewave, port: 4000) end)'"
+      tidewave:
+        "run --no-halt -e 'Agent.start(fn -> Bandit.start_link(plug: Tidewave, port: 4000) end)'"
     ]
   end
 

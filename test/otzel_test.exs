@@ -129,7 +129,7 @@ defmodule OtzelTest do
     end
   end
 
-test "regression" do
+  test "regression" do
     t = [Otzel.insert(" ", %{"" => ""}), Otzel.insert(" ")]
     assert Otzel.take(t, 2) == t
   end
@@ -142,6 +142,64 @@ test "regression" do
   test "compact with binary" do
     ot = [Otzel.insert("Hello", String), Otzel.insert("World", String)]
     assert [Otzel.insert("HelloWorld")] =~ Otzel.compact(ot)
+  end
+
+  describe "from_json/2" do
+    test "converts string content using configured string module" do
+      json = [%{"insert" => "Hello"}]
+      [insert] = Otzel.from_json(json)
+      assert insert == Otzel.insert("Hello")
+    end
+
+    test "uses embed_encoder function for embedded insert content" do
+      encoder = fn %{"image" => url} -> {:image, url} end
+      json = [%{"insert" => %{"image" => "photo.jpg"}}]
+
+      [insert] = Otzel.from_json(json, embed_encoder: encoder)
+      assert insert.content == {:image, "photo.jpg"}
+    end
+
+    test "uses embed_encoder {mod, fun} for embedded insert content" do
+      defmodule TestEncoder do
+        def decode(%{"image" => url}), do: {:image, url}
+      end
+
+      json = [%{"insert" => %{"image" => "photo.jpg"}}]
+
+      [insert] = Otzel.from_json(json, embed_encoder: {TestEncoder, :decode})
+      assert insert.content == {:image, "photo.jpg"}
+    end
+
+    test "uses embed_encoder function for embedded retain target" do
+      encoder = fn %{"embed" => ops} -> {:nested, ops} end
+      json = [%{"retain" => %{"embed" => [%{"insert" => "a"}]}}]
+
+      [retain] = Otzel.from_json(json, embed_encoder: encoder)
+      assert retain.target == {:nested, [%{"insert" => "a"}]}
+    end
+
+    test "uses embed_encoder {mod, fun} for embedded retain target" do
+      defmodule TestRetainEncoder do
+        def decode(%{"embed" => ops}), do: {:nested, ops}
+      end
+
+      json = [%{"retain" => %{"embed" => [%{"insert" => "a"}]}}]
+
+      [retain] = Otzel.from_json(json, embed_encoder: {TestRetainEncoder, :decode})
+      assert retain.target == {:nested, [%{"insert" => "a"}]}
+    end
+
+    test "passes through integer retain targets unchanged" do
+      json = [%{"retain" => 5}]
+      [retain] = Otzel.from_json(json)
+      assert retain.target == 5
+    end
+
+    test "passes through delete operations unchanged" do
+      json = [%{"delete" => 3}]
+      [delete] = Otzel.from_json(json)
+      assert delete.count == 3
+    end
   end
 
   describe "Iomemo" do

@@ -78,15 +78,14 @@ defmodule Otzel.Op.Retain do
 
   def from_json(%{"retain" => target} = json, opts) do
     embedded =
-      if is_map(target) do
-        if encoder = Keyword.get(opts, :embed_encoder, @embed_encoder) do
-          {mod, fun} = encoder
-          apply(mod, fun, [target])
-        else
-          target
-        end
+      with target when is_map(target) <- target,
+           function when is_function(function, 1) <-
+             Keyword.get(opts, :embed_encoder, @embed_encoder) do
+        function.(target)
       else
-        target
+        target when is_integer(target) -> target
+        {mod, fun} -> apply(mod, fun, [target])
+        _ -> target
       end
 
     %__MODULE__{

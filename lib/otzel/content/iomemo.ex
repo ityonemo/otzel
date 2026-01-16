@@ -44,6 +44,7 @@ defmodule Otzel.Content.Iomemo do
 
   defp codepoint_split_at(string, count) do
     codepoints = String.codepoints(string)
+
     {Enum.take(codepoints, count) |> IO.iodata_to_binary(),
      Enum.drop(codepoints, count) |> IO.iodata_to_binary()}
   end
@@ -135,10 +136,12 @@ defmodule Otzel.Content.Iomemo do
   def invert(_, _), do: raise("unimplemented")
 
   def concatenate(list) do
-    {rev_str, l, rev_ls} = Enum.reduce(list, {[], 0, []}, fn
-      %__MODULE__{s: s, l: l}, {acc_s, acc_l, acc_ls} ->
-        {[s | acc_s], acc_l + tlen(l), [l | acc_ls]}
-    end)
+    {rev_str, l, rev_ls} =
+      Enum.reduce(list, {[], 0, []}, fn
+        %__MODULE__{s: s, l: l}, {acc_s, acc_l, acc_ls} ->
+          {[s | acc_s], acc_l + tlen(l), [l | acc_ls]}
+      end)
+
     %__MODULE__{s: Enum.reverse(rev_str), l: {l, Enum.reverse(rev_ls)}}
   end
 

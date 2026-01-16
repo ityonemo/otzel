@@ -110,15 +110,20 @@ defmodule Otzel.Op.Insert do
   end
 
   @embed_encoder Application.compile_env(:otzel, :embed_encoder)
+  @string_module Application.compile_env(:otzel, :string_module, Otzel.Content.Iomemo)
 
   def from_json(%{"insert" => content} = json, opts) do
-    embedded = if encoder = Keyword.get(opts, :embed_encoder, @embed_encoder) do
-      {mod, fun} = encoder
-      apply(mod, fun, [content])
-    else
-      content
-    end
-    %__MODULE__{content: embedded, attrs: Map.get(json, "attributes")}
+    processed =
+      with content when is_map(content) <- content,
+           function when is_function(function, 1) <-
+             Keyword.get(opts, :embed_encoder, @embed_encoder) do
+        function.(content)
+      else
+        content when is_binary(content) -> @string_module.new(content)
+        {mod, fun} -> apply(mod, fun, [content])
+      end
+
+    %__MODULE__{content: processed, attrs: Map.get(json, "attributes")}
   end
 end
 

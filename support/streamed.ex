@@ -82,6 +82,7 @@ defmodule Otzel.Streamed do
 
   defp insert(opts) do
     generator = Keyword.get(opts, :generator, iomemo(opts))
+
     {generator, attrs()}
     |> StreamData.tuple()
     |> StreamData.map(fn {str, attrs} ->

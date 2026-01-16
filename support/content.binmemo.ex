@@ -6,6 +6,7 @@ defmodule Otzel.Content.Binmemo do
 
   defp codepoint_split_at(string, count) do
     codepoints = String.codepoints(string)
+
     {Enum.take(codepoints, count) |> IO.iodata_to_binary(),
      Enum.drop(codepoints, count) |> IO.iodata_to_binary()}
   end
@@ -46,10 +47,12 @@ defmodule Otzel.Content.Binmemo do
   end
 
   def concatenate(list) do
-    {strs, total_len} = Enum.reduce(list, {[], 0}, fn
-      %__MODULE__{s: s, len: len}, {acc_s, acc_len} ->
-        {[s | acc_s], acc_len + len}
-    end)
+    {strs, total_len} =
+      Enum.reduce(list, {[], 0}, fn
+        %__MODULE__{s: s, len: len}, {acc_s, acc_len} ->
+          {[s | acc_s], acc_len + len}
+      end)
+
     %__MODULE__{s: strs |> Enum.reverse() |> IO.iodata_to_binary(), len: total_len}
   end
 

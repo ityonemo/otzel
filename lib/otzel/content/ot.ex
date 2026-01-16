@@ -48,12 +48,16 @@ defmodule Otzel.Content.Ot do
 
   def diff(src, %__MODULE__{} = dst) do
     case Otzel.diff(src.transform, dst.transform) do
-      [] -> []
+      [] ->
+        []
+
       inner_diff ->
-        [%Retain{
-          target: %__MODULE__{transform: inner_diff},
-          attrs: nil
-        }]
+        [
+          %Retain{
+            target: %__MODULE__{transform: inner_diff},
+            attrs: nil
+          }
+        ]
     end
   end
 

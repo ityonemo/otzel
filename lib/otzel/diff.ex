@@ -182,7 +182,18 @@ defmodule Otzel.Diff do
   end
 
   # Find the best common overlap inside two texts.
-  defp best_common(long, short, seed, seed_loc, start, best_long_a, best_long_b, best_short_a, best_short_b, best_common) do
+  defp best_common(
+         long,
+         short,
+         seed,
+         seed_loc,
+         start,
+         best_long_a,
+         best_long_b,
+         best_short_a,
+         best_short_b,
+         best_common
+       ) do
     # Check if we can find a match for seed inside the short text.
     case :binary.match(short, seed, scope: {start, byte_size(short) - start}) do
       :nomatch ->
@@ -216,11 +227,31 @@ defmodule Otzel.Diff do
           <<new_best_short_a::binary-size(b), _::binary>> = short_pre
           <<_::binary-size(prefix_size), new_best_short_b::binary>> = short_post
 
-          best_common(long, short, seed, seed_loc, next_char(short, match_start),
-            new_best_long_a, new_best_long_b, new_best_short_a, new_best_short_b, new_best_common)
+          best_common(
+            long,
+            short,
+            seed,
+            seed_loc,
+            next_char(short, match_start),
+            new_best_long_a,
+            new_best_long_b,
+            new_best_short_a,
+            new_best_short_b,
+            new_best_common
+          )
         else
-          best_common(long, short, seed, seed_loc, next_char(short, match_start),
-            best_long_a, best_long_b, best_short_a, best_short_b, best_common)
+          best_common(
+            long,
+            short,
+            seed,
+            seed_loc,
+            next_char(short, match_start),
+            best_long_a,
+            best_long_b,
+            best_short_a,
+            best_short_b,
+            best_common
+          )
         end
     end
   end
@@ -256,8 +287,12 @@ defmodule Otzel.Diff do
   # Return true iff the text is smaller than specified (in codepoints)
   defp text_smaller_than?(_, 0), do: false
   defp text_smaller_than?(<<>>, _size), do: true
-  defp text_smaller_than?(<<_c::utf8, rest::binary>>, size) when size > 0, do: text_smaller_than?(rest, size - 1)
-  defp text_smaller_than?(<<_c, rest::binary>>, size) when size > 0, do: text_smaller_than?(rest, size - 1)
+
+  defp text_smaller_than?(<<_c::utf8, rest::binary>>, size) when size > 0,
+    do: text_smaller_than?(rest, size - 1)
+
+  defp text_smaller_than?(<<_c, rest::binary>>, size) when size > 0,
+    do: text_smaller_than?(rest, size - 1)
 
   # Return the common prefix of text1 and text2 (utf8 aware)
   defp common_prefix(text1, text2) do
@@ -338,15 +373,26 @@ defmodule Otzel.Diff do
   # valid 1-byte beginning
   defp repair_head(<<0::1, _a::7, _rest::binary>> = bin), do: {<<>>, bin}
   # valid 4-byte beginning
-  defp repair_head(<<0b11110::5, _a::3, 0b10::2, _b::6, 0b10::2, _c::6, 0b10::2, _d::6, _rest::binary>> = bin), do: {<<>>, bin}
+  defp repair_head(
+         <<0b11110::5, _a::3, 0b10::2, _b::6, 0b10::2, _c::6, 0b10::2, _d::6, _rest::binary>> =
+           bin
+       ),
+       do: {<<>>, bin}
+
   # valid 3-byte beginning
-  defp repair_head(<<0b1110::4, _a::4, 0b10::2, _b::6, 0b10::2, _c::6, _rest::binary>> = bin), do: {<<>>, bin}
+  defp repair_head(<<0b1110::4, _a::4, 0b10::2, _b::6, 0b10::2, _c::6, _rest::binary>> = bin),
+    do: {<<>>, bin}
+
   # invalid 3-byte beginning
-  defp repair_head(<<0b10::2, a::6, 0b10::2, b::6, 0b10::2, c::6, rest::binary>>), do: {<<0b10::2, a::6, 0b10::2, b::6, 0b10::2, c::6>>, rest}
+  defp repair_head(<<0b10::2, a::6, 0b10::2, b::6, 0b10::2, c::6, rest::binary>>),
+    do: {<<0b10::2, a::6, 0b10::2, b::6, 0b10::2, c::6>>, rest}
+
   # valid 2-byte beginning
   defp repair_head(<<0b110::3, _a::5, 0b10::2, _b::6, _rest::binary>> = bin), do: {<<>>, bin}
   # invalid 2-byte beginnings
-  defp repair_head(<<0b10::2, a::6, 0b10::2, b::6, rest::binary>>), do: {<<0b10::2, a::6, 0b10::2, b::6>>, rest}
+  defp repair_head(<<0b10::2, a::6, 0b10::2, b::6, rest::binary>>),
+    do: {<<0b10::2, a::6, 0b10::2, b::6>>, rest}
+
   # invalid 1-byte beginning
   defp repair_head(<<0b10::2, a::6, rest::binary>>), do: {<<0b10::2, a::6>>, rest}
   # Illegal sequence, can't repair it.

@@ -220,10 +220,20 @@ Otzel.Content.embed?(embed_content)   # => true
 
 #### JSON Deserialization with Custom Embeds
 
-When deserializing JSON that contains embedded content, use the `:embed_encoder` option to convert JSON maps back to your embed structs:
+When deserializing JSON that contains embedded content, use the `:embed_encoder` option to convert JSON maps back to your embed structs. The encoder can be either an anonymous function or a `{module, function}` tuple:
 
 ```elixir
-# Define an encoder function
+# Option 1: Anonymous function (useful for simple cases)
+encoder = fn
+  %{"image" => url} -> %MyApp.ImageEmbed{url: url}
+  %{"embed" => ops} -> %Otzel.Content.Ot{transform: Otzel.from_json(ops)}
+  other -> other
+end
+
+json = [%{"insert" => %{"image" => "photo.jpg"}}]
+Otzel.from_json(json, embed_encoder: encoder)
+
+# Option 2: Module function tuple (useful for complex or reusable encoders)
 defmodule MyApp.EmbedEncoder do
   def decode(%{"image" => url}) do
     %MyApp.ImageEmbed{url: url}
@@ -236,12 +246,12 @@ defmodule MyApp.EmbedEncoder do
   def decode(other), do: other  # Pass through unknown content
 end
 
-# Use at runtime
-json = [%{"insert" => %{"image" => "photo.jpg"}}]
 Otzel.from_json(json, embed_encoder: {MyApp.EmbedEncoder, :decode})
 
-# Or configure globally in config.exs
+# Configure globally in config.exs (supports both formats)
 config :otzel, :embed_encoder, {MyApp.EmbedEncoder, :decode}
+# or
+config :otzel, :embed_encoder, &MyApp.EmbedEncoder.decode/1
 ```
 
 #### Error Handling
