@@ -134,14 +134,62 @@ defmodule OtzelTest do
     assert Otzel.take(t, 2) == t
   end
 
-  test "compact test" do
-    ot = [Otzel.insert("Hello"), Otzel.insert("World")]
-    assert [Otzel.insert("HelloWorld")] =~ Otzel.compact(ot)
-  end
+  describe "compact/1" do
+    test "compacts sequential inserts" do
+      ot = [Otzel.insert("Hello"), Otzel.insert("World")]
+      assert [Otzel.insert("HelloWorld")] =~ Otzel.compact(ot)
+    end
 
-  test "compact with binary" do
-    ot = [Otzel.insert("Hello", String), Otzel.insert("World", String)]
-    assert [Otzel.insert("HelloWorld")] =~ Otzel.compact(ot)
+    test "compacts sequential inserts with binary string module" do
+      ot = [Otzel.insert("Hello", String), Otzel.insert("World", String)]
+      assert [Otzel.insert("HelloWorld")] =~ Otzel.compact(ot)
+    end
+
+    test "compacts sequential deletes" do
+      ot = [Otzel.delete(3), Otzel.delete(5), Otzel.delete(2)]
+      assert [Otzel.delete(10)] == Otzel.compact(ot)
+    end
+
+    test "compacts sequential retains" do
+      ot = [Otzel.retain(3), Otzel.retain(5), Otzel.retain(2)]
+      # Sequential retains merge to one, then get stripped as trailing retain
+      assert [] == Otzel.compact(ot)
+    end
+
+    test "collapses to empty list when entire sequence is trailing retains" do
+      ot = [Otzel.retain(10)]
+      assert [] == Otzel.compact(ot)
+    end
+
+    test "collapses trailing retains after other operations" do
+      ot = [Otzel.insert("Hello"), Otzel.retain(5)]
+      assert [Otzel.insert("Hello")] =~ Otzel.compact(ot)
+    end
+
+    test "compacts mixed operations correctly" do
+      ot = [
+        Otzel.insert("Hello"),
+        Otzel.insert("World"),
+        Otzel.retain(3),
+        Otzel.retain(2),
+        Otzel.delete(1),
+        Otzel.delete(2)
+      ]
+
+      compacted = Otzel.compact(ot)
+      assert [Otzel.insert("HelloWorld"), Otzel.retain(5), Otzel.delete(3)] =~ compacted
+    end
+
+    test "removes trailing retains from mixed operations" do
+      ot = [
+        Otzel.delete(3),
+        Otzel.insert("Hi"),
+        Otzel.retain(10)
+      ]
+
+      compacted = Otzel.compact(ot)
+      assert [Otzel.delete(3), Otzel.insert("Hi")] =~ compacted
+    end
   end
 
   describe "from_json/2" do

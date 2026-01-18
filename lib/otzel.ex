@@ -521,28 +521,26 @@ defmodule Otzel do
   [%{"insert" => "Hello"}, %{"insert" => "World", "attributes" => %{"bold" => true}}]
   ```
   """
-  def compact(ops) do
-    case Enum.reverse(ops) do
-      [%Retain{target: t, attrs: nil} | rest] when is_integer(t) ->
-        backcompact(rest, [])
-
-      other ->
-        backcompact(other, [])
+  def compact(list) do
+    case do_compact(list, []) do
+      [%Retain{target: t, attrs: nil} | rest] when is_integer(t) -> Enum.reverse(rest)
+      other -> Enum.reverse(other)
     end
   end
 
-  defp backcompact([head | rest], [last | rest_so_far] = so_far) do
-    case Op.merge_into(last, head) do
+  defp do_compact([a, b | rest], so_far) do
+    case Op.merge_into(b, a) do
       nil ->
-        backcompact(rest, [head | so_far])
-
+        do_compact([b | rest], [a | so_far])
       merged ->
-        backcompact(rest, [merged | rest_so_far])
+        do_compact([merged | rest], so_far)
     end
   end
 
-  defp backcompact([], so_far), do: so_far
-  defp backcompact([head | rest], []), do: backcompact(rest, [head])
+  defp do_compact([a], so_far), do: [a | so_far]
+
+  # this should only trigger when we attempt to compact an empty list.
+  defp do_compact([], so_far), do: so_far
 
   @doc """
   Performs semantic cleanup on a diff, simplifying interleaved delete/insert
