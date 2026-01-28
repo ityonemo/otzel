@@ -16,6 +16,7 @@ end
 defmodule OtzelTest.Content.Image do
   use Otzel.Content, atomic: true
 
+  @derive JSON.Encoder
   @enforce_keys [:url, :alt]
   defstruct @enforce_keys
 

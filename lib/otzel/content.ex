@@ -79,6 +79,10 @@ defprotocol Otzel.Content do
   @spec as_binary(t) :: binary | nil
   def as_binary(content)
 
+  @doc "Converts content to an iodata, or <<0>> if it's an embed"
+  @spec as_iodata(t) :: iodata
+  def as_iodata(content)
+
   @doc "Returns true if the content is an embedded type (not string-like)"
   @spec embed?(t) :: boolean
   def embed?(content)
@@ -95,6 +99,8 @@ after
         def as_binary(_), do: nil
         def embed?(_), do: true
         def concatenate([single]), do: single
+
+        def as_iodata(_), do: <<0>>
 
         def diff(a, b) when a == b, do: []
 

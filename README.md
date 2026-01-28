@@ -24,7 +24,7 @@ Add `otzel` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:otzel, "~> 0.3.0"}
+    {:otzel, "~> 0.4.0"}
   ]
 end
 ```
@@ -311,6 +311,84 @@ Otzel maintains the standard OT invariants:
    ```
    compose(compose(D, C), invert(C, D)) == D
    ```
+
+## Performance
+
+Benchmarks comparing Otzel against the [Delta](https://hex.pm/packages/delta) Elixir library.
+
+### High-Complexity (Fragmented Documents)
+
+Randomized OT operations representing highly fragmented documents with many small operations.
+
+| Operation | Otzel | Delta | Speedup | Memory |
+|-----------|-------|-------|---------|--------|
+| diff | 526 μs | 676 μs | **1.3x** | 18% less |
+| compose | 33 ms | 2,046 ms | **61x** | 20x less |
+| invert | 27 ms | 8,849 ms | **331x** | 103x less |
+
+### Low-Complexity (Typical Editing)
+
+**Simple:** Single ~10KB document with minimal changes
+
+| Operation | Otzel | Delta | Speedup |
+|-----------|-------|-------|---------|
+| diff | 4.2 μs | 988 μs | **235x** |
+| compose | 1.7 μs | 12.2 μs | **7x** |
+| invert | 1.9 μs | 14.4 μs | **7.5x** |
+
+**Typing:** Sequential character-by-character edits
+
+| Operation | Otzel | Delta | Speedup |
+|-----------|-------|-------|---------|
+| diff | 204 μs | 15.7 ms | **77x** |
+| compose | 20.7 μs | 287 μs | **14x** |
+| invert | 17.8 μs | 37.9 μs | **2x** |
+
+### Detailed Results
+
+See [PERFORMANCE.md](PERFORMANCE.md) for full benchmark data across all string representations.
+
+**Test Environment:** Linux, AMD Ryzen 7 7840U, 16 cores, Elixir 1.18.4, Erlang 28.1 with JIT
+
+### Why Otzel is Faster
+
+1. **IO-list string representation** (`Iomemo`): Structural sharing during split/concatenate avoids copying
+2. **Optimized diff**: Single-pass serialization with embed detection, skips reconstruction for text-only documents
+3. **Efficient iteration**: Avoids intermediate allocations in compose/transform loops
+
+### Understanding the Speedup Variation
+
+The diff speedup varies dramatically: **1.3x** for high-complexity vs **235x** for simple documents. This reveals two different performance factors:
+
+- **High-complexity (fragmented)**: Many small strings amortize per-string overhead. The 1.3x speedup reflects the core diff algorithm efficiency.
+- **Low-complexity (large strings)**: Delta's overhead scales with string length (codepoint conversion, intermediate allocations). On a 10KB contiguous string, this overhead dominates—Delta takes ~1ms while Otzel takes ~4μs.
+
+In other words, high-complexity benchmarks measure algorithmic efficiency, while low-complexity benchmarks expose string handling overhead.
+
+## Comparison with Other Libraries
+
+Otzel implements the same Delta format as [quill-delta](https://github.com/quilljs/delta).
+
+| Feature | Otzel | Delta (Elixir) | quill-delta (JS) |
+|---------|-------|----------------|------------------|
+| Compose | ✓ | ✓ | ✓ |
+| Transform | ✓ | ✓ | ✓ |
+| Invert | ✓ | ✓ | ✓ |
+| Diff | ✓ | ✓ | ✓ |
+| Custom embeds | ✓ (protocol-based) | ✓ | ✓ |
+| Nested OT embeds | ✓ (diffable) | Limited | ✗ |
+| Mixed embed+text diff | ✓ | ✗ | Plugin ([quill-delta-enhanced](https://github.com/SilentTiger/quill-delta-enhanced)) |
+| Semantic cleanup | ✓ | ✓ | ✓ |
+| JSON compatible | ✓ | ✓ | ✓ |
+
+Otzel's mixed content diff uses NULL character serialization with iterator-based reconstruction, following the quill-delta-enhanced approach.
+
+### When to Use Otzel
+
+- **High-throughput collaborative editing** with many concurrent operations
+- **Complex documents** with mixed text and embeds
+- **Nested OT structures** requiring recursive diffing
+- **Memory-constrained environments** where allocation efficiency matters
 
 ## Testing
 

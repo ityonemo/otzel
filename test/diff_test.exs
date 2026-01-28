@@ -230,6 +230,70 @@ defmodule OtzelTest.DiffTest do
     end
   end
 
+  describe ".diff/2 (mixed embed + text)" do
+    alias OtzelTest.Content.Image
+
+    test "same embed with text changes" do
+      a = [Otzel.insert(Image.new("http://example.com")), Otzel.insert("hello\n")]
+      b = [Otzel.insert(Image.new("http://example.com")), Otzel.insert("hello world\n")]
+
+      diff = Otzel.diff(a, b)
+      assert Otzel.compose(a, diff) =~ b
+    end
+
+    test "different embed with same text" do
+      a = [Otzel.insert(Image.new("http://a.com")), Otzel.insert("hello")]
+      b = [Otzel.insert(Image.new("http://b.com")), Otzel.insert("hello")]
+
+      diff = Otzel.diff(a, b)
+      assert Otzel.compose(a, diff) =~ b
+    end
+
+    test "text followed by embed" do
+      a = [Otzel.insert("prefix "), Otzel.insert(Image.new("http://example.com"))]
+      b = [Otzel.insert("prefix!"), Otzel.insert(Image.new("http://example.com"))]
+
+      diff = Otzel.diff(a, b)
+      assert Otzel.compose(a, diff) =~ b
+    end
+
+    test "multiple embeds interspersed with text" do
+      a = [
+        Otzel.insert(Image.new("img1")),
+        Otzel.insert("text1"),
+        Otzel.insert(Image.new("img2")),
+        Otzel.insert("text2")
+      ]
+
+      b = [
+        Otzel.insert(Image.new("img1")),
+        Otzel.insert("modified"),
+        Otzel.insert(Image.new("img2")),
+        Otzel.insert("text2!")
+      ]
+
+      diff = Otzel.diff(a, b)
+      assert Otzel.compose(a, diff) =~ b
+    end
+
+    test "embed at end of text" do
+      a = [Otzel.insert("hello"), Otzel.insert(Image.new("img"))]
+      b = [Otzel.insert("hello world"), Otzel.insert(Image.new("img"))]
+
+      diff = Otzel.diff(a, b)
+      assert Otzel.compose(a, diff) =~ b
+    end
+
+    test "identical embed and text" do
+      a = [Otzel.insert(Image.new("img")), Otzel.insert("text")]
+      b = [Otzel.insert(Image.new("img")), Otzel.insert("text")]
+
+      # Should be empty diff or just attrs
+      diff = Otzel.diff(a, b)
+      assert Otzel.compose(a, diff) =~ b
+    end
+  end
+
   test "regression-1" do
     text_a = [Otzel.insert("AB", %{"A" => "B"})]
     text_b = [Otzel.insert("AC")]
