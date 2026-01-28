@@ -355,6 +355,7 @@ See [PERFORMANCE.md](PERFORMANCE.md) for full benchmark data across all string r
 1. **IO-list string representation** (`Iomemo`): Structural sharing during split/concatenate avoids copying
 2. **Optimized diff**: Single-pass serialization with embed detection, skips reconstruction for text-only documents
 3. **Efficient iteration**: Avoids intermediate allocations in compose/transform loops
+4. **Atoms over strings**: Uses atoms for internal keys and tags, avoiding string comparisons
 
 ### Understanding the Speedup Variation
 
