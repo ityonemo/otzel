@@ -376,7 +376,7 @@ Otzel implements the same Delta format as [quill-delta](https://github.com/quill
 | Invert | ✓ | ✓ | ✓ |
 | Diff | ✓ | ✓ | ✓ |
 | Custom embeds | ✓ (protocol-based) | ✓ | ✓ |
-| Nested OT embeds | ✓ (diffable) | Limited | ✗ |
+| Nested OT embeds | ✓ (diffable) | Limited | Plugin |
 | Mixed embed+text diff | ✓ | ✗ | Plugin ([quill-delta-enhanced](https://github.com/SilentTiger/quill-delta-enhanced)) |
 | Semantic cleanup | ✓ | ✓ | ✓ |
 | JSON compatible | ✓ | ✓ | ✓ |
