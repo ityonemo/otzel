@@ -109,6 +109,10 @@ defmodule Otzel.Op.Insert do
     end)
   end
 
+  def as_iodata(%{content: content}) do
+    Content.as_iodata(content, "")
+  end
+
   @embed_encoder Application.compile_env(:otzel, :embed_encoder)
   @string_module Application.compile_env(:otzel, :string_module, Otzel.Content.Iomemo)
 

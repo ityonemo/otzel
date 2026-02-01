@@ -250,6 +250,50 @@ defmodule OtzelTest do
     end
   end
 
+  describe "to_string/1 and to_iodata/1" do
+    alias OtzelTest.Content.Image
+
+    test "converts simple document to string" do
+      doc = [Otzel.insert("Hello World")]
+      assert Otzel.to_string(doc) == "Hello World"
+    end
+
+    test "converts multi-insert document to string" do
+      doc = [Otzel.insert("Hello"), Otzel.insert(" "), Otzel.insert("World")]
+      assert Otzel.to_string(doc) == "Hello World"
+    end
+
+    test "converts document with formatting to string" do
+      doc = [Otzel.insert("Hello", %{bold: true}), Otzel.insert(" World")]
+      assert Otzel.to_string(doc) == "Hello World"
+    end
+
+    test "embeds are replaced with empty string" do
+      doc = [Otzel.insert("Hello "), Otzel.insert(Image.new("photo.jpg")), Otzel.insert(" World")]
+      assert Otzel.to_string(doc) == "Hello  World"
+    end
+
+    test "to_iodata returns iodata" do
+      doc = [Otzel.insert("Hello"), Otzel.insert(" World")]
+      iodata = Otzel.to_iodata(doc)
+      assert IO.iodata_to_binary(iodata) == "Hello World"
+    end
+
+    test "raises on non-document (contains retain)" do
+      delta = [Otzel.retain(5), Otzel.insert("Hello")]
+      assert_raise ArgumentError, fn -> Otzel.to_string(delta) end
+    end
+
+    test "raises on non-document (contains delete)" do
+      delta = [Otzel.delete(3), Otzel.insert("Hello")]
+      assert_raise ArgumentError, fn -> Otzel.to_string(delta) end
+    end
+
+    test "empty document returns empty string" do
+      assert Otzel.to_string([]) == ""
+    end
+  end
+
   describe "Iomemo" do
     alias Otzel.Content.Iomemo
 

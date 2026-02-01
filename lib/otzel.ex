@@ -854,6 +854,7 @@ defmodule Otzel do
   end
 
   @string_module Application.compile_env(:otzel, :string_module, Otzel.Content.Iomemo)
+  @json_module Application.compile_env(:otzel, :json_module, JSON)
 
   @spec insert(String.t() | Otzel.Content.t(), attrs :: nil | map) :: Otzel.Op.Insert.t()
   @doc """
@@ -1223,6 +1224,72 @@ defmodule Otzel do
   end
 
   defp finalize([], forward), do: forward
+
+  @doc """
+  Converts a document to a binary string.
+
+  Extracts all text content from the document, concatenating insert operations.
+  Embedded content (non-text) is replaced with an empty string.
+
+  Only works on documents (lists containing only insert operations).
+  Raises `ArgumentError` if the list contains retain or delete operations.
+
+  ## Examples
+
+      iex> doc = [Otzel.insert("Hello"), Otzel.insert(" World")]
+      iex> Otzel.to_string(doc)
+      "Hello World"
+
+  """
+  def to_string(list) do
+    list
+    |> to_iodata([])
+    |> IO.iodata_to_binary
+  end
+
+  @doc """
+  Converts a document to iodata.
+
+  Like `to_string/1`, but returns iodata instead of a binary. This avoids
+  an extra concatenation step if the result will be written to an IO device.
+
+  Embedded content (non-text) is replaced with an empty string.
+
+  ## Examples
+
+      iex> doc = [Otzel.insert("Hello"), Otzel.insert(" World")]
+      iex> Otzel.to_iodata(doc) |> IO.iodata_to_binary()
+      "Hello World"
+
+  """
+  def to_iodata(list), do: to_iodata(list, [])
+
+  defp to_iodata([%Insert{} = head | rest], so_far) do
+    to_iodata(rest, [so_far | Insert.as_iodata(head)])
+  end
+
+  defp to_iodata([], so_far), do: so_far
+
+  defp to_iodata([delta | _], _), do: raise(ArgumentError, message: "#{inspect(delta)} is invalid")
+
+  @doc """
+  Encodes a delta to a Quill-compatible JSON string.
+
+  Returns a JSON string with an `"ops"` key containing the list of operations,
+  matching the format expected by Quill.js.
+
+  Uses the configured `:json_module` (defaults to `JSON`).
+
+  ## Examples
+
+      iex> delta = [Otzel.insert("Hello")]
+      iex> Otzel.encode!(delta)
+      ~s|{"ops":[{"insert":"Hello"}]}|
+
+  """
+  def encode!(list) when is_list(list) do
+    @json_module.encode!(%{ops: list})
+  end
 
   # Counts the number of UTF-8 codepoints in a binary string.
   # This is a low-level utility used internally for size calculations.

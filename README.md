@@ -24,7 +24,7 @@ Add `otzel` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:otzel, "~> 0.4.0"}
+    {:otzel, "~> 0.5.0"}
   ]
 end
 ```

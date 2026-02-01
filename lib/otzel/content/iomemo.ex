@@ -167,7 +167,7 @@ defmodule Otzel.Content.Iomemo do
   defp count_of({integer, _list}), do: integer
 
   def as_binary(iodata), do: IO.iodata_to_binary(iodata.s)
-  def as_iodata(iodata), do: iodata.s
+  def as_iodata(iodata, _), do: iodata.s
   def embed?(_), do: false
 
   @doc """

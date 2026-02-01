@@ -32,7 +32,7 @@ defimpl Otzel.Content, for: BitString do
     Otzel.Diff.diff(a, b, __MODULE__)
   end
 
-  def as_iodata(string), do: string
+  def as_iodata(string, _), do: string
 
   def concatenate(contents), do: IO.iodata_to_binary(contents)
 end
