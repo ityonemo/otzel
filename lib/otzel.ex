@@ -837,9 +837,17 @@ defmodule Otzel do
 
   ## Options
 
-    * `:embed_encoder` - A `{module, function}` tuple that will be called with
-      the raw content to convert embedded content back to structs. The function
-      should return the appropriate struct or pass through the content unchanged.
+    * `:embed_encoder` - A function or `{module, function}` tuple that converts
+      embedded content maps back to structs. Receives the raw map and should
+      return the appropriate struct or pass through unchanged.
+
+  ## Configuration
+
+  You can set a default embed encoder via application config:
+
+      config :otzel, :embed_encoder, &MyApp.embed_encoder/1
+
+  The option passed to `from_json/2` takes precedence over the config.
 
   ## Examples
 
@@ -847,6 +855,13 @@ defmodule Otzel do
       iex> delta = Otzel.from_json(json)
       iex> length(delta)
       2
+
+      # With custom embed encoder
+      encoder = fn
+        %{"image" => url} -> %MyApp.Image{url: url}
+        other -> other
+      end
+      Otzel.from_json(json, embed_encoder: encoder)
 
   """
   def from_json(json, opts \\ []) when is_list(json) do
@@ -881,6 +896,20 @@ defmodule Otzel do
   Creates a `Delete` operation with the given count.
   """
   def delete(count), do: %Delete{count: count}
+
+  @doc """
+  Returns an empty Quill document.
+
+  In Quill, an empty document is represented as a single newline insert.
+  This is useful for initializing a new Quill editor.
+
+  ## Examples
+
+      iex> Otzel.quill_init()
+      [%Otzel.Op.Insert{content: %Otzel.Content.Iomemo{s: "\\n", l: 1}, attrs: nil}]
+
+  """
+  def quill_init, do: [insert("\n")]
 
   @spec diff(t, t) :: t
   @doc """
