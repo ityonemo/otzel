@@ -268,6 +268,68 @@ defmodule Otzel do
     compose(left, right, [])
   end
 
+  @spec compose_all([t]) :: t
+  @doc """
+  Composes a list of deltas into a single delta by applying them sequentially.
+
+  Given deltas [A, B, C], `compose_all([A, B, C])` returns a delta D such that
+  applying D to a document has the same effect as applying A, then B, then C.
+
+  Returns an empty delta `[]` if given an empty list.
+
+  ## Examples
+
+      iex> deltas = [
+      ...>   [Otzel.insert("Hello")],
+      ...>   [Otzel.retain(5), Otzel.insert(" World")],
+      ...>   [Otzel.retain(11), Otzel.insert("!")]
+      ...> ]
+      iex> result = Otzel.compose_all(deltas)
+      iex> result |> JSON.encode!() |> JSON.decode!()
+      [%{"insert" => "Hello World!"}]
+
+  """
+  def compose_all([]), do: []
+  def compose_all(list) do
+    Enum.reduce(list, &compose(&2, &1))
+  end
+
+  @spec compose_scan([t]) :: [t]
+  @doc """
+  Composes a list of deltas cumulatively, returning all intermediate results.
+
+  Given deltas [A, B, C], returns [A, compose(A, B), compose(compose(A, B), C)].
+  Each element in the result represents the document state after applying
+  all deltas up to that point.
+
+  Returns an empty list `[]` if given an empty list.
+
+  ## Examples
+
+      iex> deltas = [
+      ...>   [Otzel.insert("Hello")],
+      ...>   [Otzel.retain(5), Otzel.insert(" World")],
+      ...>   [Otzel.retain(11), Otzel.insert("!")]
+      ...> ]
+      iex> results = Otzel.compose_scan(deltas)
+      iex> length(results)
+      3
+      iex> Enum.map(results, &JSON.encode!/1) |> Enum.map(&JSON.decode!/1)
+      [
+        [%{"insert" => "Hello"}],
+        [%{"insert" => "Hello World"}],
+        [%{"insert" => "Hello World!"}]
+      ]
+
+  """
+  def compose_scan([]), do: []
+  def compose_scan(list), do: compose_scan(tl(list), [hd(list)])
+
+  defp compose_scan([], so_far), do: Enum.reverse(so_far)
+  defp compose_scan([next | rest], [prev | _] = so_far) do
+    compose_scan(rest, [compose(prev, next) | so_far])
+  end
+
   defp compose([], [], so_far), do: finalize(so_far, [])
 
   defp compose([], rest, so_far) do
