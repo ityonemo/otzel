@@ -277,6 +277,13 @@ defmodule Otzel do
 
   Returns an empty delta `[]` if given an empty list.
 
+  > #### Sequential Operations Only {: .warning}
+  >
+  > This function is only appropriate for deltas that were created sequentially,
+  > where each delta was created against the result of the previous one. For
+  > concurrent edits (multiple users editing simultaneously), use `transform/3`
+  > to adjust deltas before composing.
+
   ## Examples
 
       iex> deltas = [
@@ -303,6 +310,13 @@ defmodule Otzel do
   all deltas up to that point.
 
   Returns an empty list `[]` if given an empty list.
+
+  > #### Sequential Operations Only {: .warning}
+  >
+  > This function is only appropriate for deltas that were created sequentially,
+  > where each delta was created against the result of the previous one. For
+  > concurrent edits (multiple users editing simultaneously), use `transform/3`
+  > to adjust deltas before composing.
 
   ## Examples
 
