@@ -100,6 +100,15 @@ defmodule Otzel.RegressionTest do
 
   defp take_counted([], _, so_far), do: Enum.reverse(so_far)
 
+  describe "compose with Retain(0)" do
+    test "Retain(0) is stripped when composing with empty document" do
+      result = Otzel.compose([], [Otzel.retain(0), Otzel.insert("X")])
+
+      assert [%Otzel.Op.Insert{attrs: nil}] = result
+      assert to_string_content(result) == "X"
+    end
+  end
+
   describe "diff/2 with trailing newlines" do
     test "correctly diffs when inserting text before trailing newline" do
       old = [Otzel.insert("Hello\n")]

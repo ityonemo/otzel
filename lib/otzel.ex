@@ -205,6 +205,7 @@ defmodule Otzel do
 
   @spec push(t, Op.t() | nil) :: t
   defp push(delta, nil), do: delta
+  defp push(delta, %Retain{target: 0, attrs: nil}), do: delta
   defp push([], op), do: [op]
 
   defp push([head | rest], op) do
