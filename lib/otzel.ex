@@ -1111,37 +1111,90 @@ defmodule Otzel do
     {Enum.reverse(ops) ++ acc, src_rest, dst_rest}
   end
 
-  # Diff consumed content that may contain embeds
-  # Handles the case where piece boundaries don't align
+  # Diff consumed content that may contain embeds.
+  #
+  # The text-level diff aligns src and dst character-for-character, but every
+  # embed serializes to the same NULL placeholder, so a `Retain` over a run of
+  # embeds does NOT imply the embeds actually match — reordered embeds land in
+  # the same aligned run. We therefore walk both consumed lists in lockstep and,
+  # for each aligned piece, decide whether it is genuinely retained or must be
+  # replaced (delete + insert). `total_count` is only used as a fast path when
+  # everything turns out to be a plain retain.
   defp diff_with_embeds_inline(src_consumed, dst_consumed, total_count) do
-    src_embeds = Enum.filter(src_consumed, &Content.embed?/1)
-    dst_embeds = Enum.filter(dst_consumed, &Content.embed?/1)
+    ops = align_and_diff(src_consumed, dst_consumed, [])
 
-    # Pair up embeds and diff them
-    embed_diffs =
-      Enum.zip(src_embeds, dst_embeds)
-      |> Enum.flat_map(fn {src_embed, dst_embed} ->
-        if src_embed == dst_embed do
-          []  # Equal, will be covered by retain
-        else
-          case Content.diff(src_embed, dst_embed) do
-            [] -> []  # Equal after deep comparison
-            ops -> [{src_embed, ops}]  # Has diff
-          end
-        end
-      end)
-
-    if embed_diffs == [] do
-      # All embeds equal, simple retain
-      [%Retain{target: total_count}]
-    else
-      # Some embeds differ - need to emit their diffs
-      # For simplicity, emit a single retain with the first embed's diff
-      # This works for single-embed cases; multi-embed is rare
-      {_src_embed, ops} = hd(embed_diffs)
-      ops
+    # Fast path: if the walk produced nothing but a full-length retain, collapse
+    # it back to a single retain of the whole run.
+    case ops do
+      [%Retain{target: ^total_count}] -> [%Retain{target: total_count}]
+      _ -> ops
     end
   end
+
+  # Walk aligned src/dst content pieces, emitting ops. Both lists cover the same
+  # number of characters (they came from a single aligned retain span).
+  defp align_and_diff([], [], acc), do: Enum.reverse(acc)
+
+  defp align_and_diff([src | src_rest], [dst | dst_rest], acc) do
+    src_size = Content.size(src)
+    dst_size = Content.size(dst)
+
+    cond do
+      # An embed on either side is atomic (size 1) and cannot be split against a
+      # text piece. Resolve the embed position on its own.
+      Content.embed?(src) or Content.embed?(dst) ->
+        {op, new_src_rest, new_dst_rest} =
+          resolve_embed_position(src, src_rest, dst, dst_rest)
+
+        align_and_diff(new_src_rest, new_dst_rest, prepend(op, acc))
+
+      # Two text pieces: the string diff already proved this span equal, so retain
+      # the common length and carry any leftover of the longer piece forward.
+      src_size == dst_size ->
+        align_and_diff(src_rest, dst_rest, prepend(%Retain{target: src_size}, acc))
+
+      src_size < dst_size ->
+        {_taken, dst_leftover} = Content.take(dst, src_size)
+        align_and_diff(src_rest, [dst_leftover | dst_rest], prepend(%Retain{target: src_size}, acc))
+
+      true ->
+        {_taken, src_leftover} = Content.take(src, dst_size)
+        align_and_diff([src_leftover | src_rest], dst_rest, prepend(%Retain{target: dst_size}, acc))
+    end
+  end
+
+  # Resolve a single aligned position where at least one side is an embed. Since
+  # embeds are atomic (size 1) they must align against a single character on the
+  # other side; consume exactly one character from each side.
+  defp resolve_embed_position(src, src_rest, dst, dst_rest) do
+    {[src_piece], src_rest1} = consume_content_length([src | src_rest], 1)
+    {[dst_piece], dst_rest1} = consume_content_length([dst | dst_rest], 1)
+
+    op = diff_single_position(src_piece, dst_piece)
+    {op, src_rest1, dst_rest1}
+  end
+
+  # Diff a single-character src piece against a single-character dst piece.
+  defp diff_single_position(same, same), do: %Retain{target: 1}
+
+  defp diff_single_position(src_piece, dst_piece) do
+    if Content.embed?(src_piece) and Content.embed?(dst_piece) do
+      # Two embeds that aren't identical: try a nested diff (same struct type),
+      # otherwise replace the embed wholesale.
+      case Content.diff(src_piece, dst_piece) do
+        [] -> %Retain{target: 1}
+        [op] -> op
+        ops -> ops
+      end
+    else
+      # Embed vs text (or vice versa): no shared structure, replace it.
+      [%Delete{count: 1}, %Insert{content: dst_piece}]
+    end
+  end
+
+  # Prepend one op or a list of ops onto the (reversed) accumulator.
+  defp prepend(ops, acc) when is_list(ops), do: Enum.reverse(ops) ++ acc
+  defp prepend(op, acc), do: [op | acc]
 
   # Consume a given number of characters from content list, splitting if necessary
   defp consume_content_length(contents, 0), do: {[], contents}
