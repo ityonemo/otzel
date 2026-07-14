@@ -228,6 +228,33 @@ defmodule OtzelTest.DiffTest do
                Otzel.insert(Quote.new(Otzel.insert("bar")), %{"author" => "B"})
              ] == Otzel.diff(a, b)
     end
+
+    # Reordering a run of distinct atomic embeds (each size 1, same struct type)
+    # must preserve every embed: diff's invariant is compose(a, diff(a, b)) =~ b.
+    # Regression: diff aligned the equal-sized embeds positionally and emitted a
+    # diff that dropped one embed and duplicated another, so composing the diff
+    # onto `a` did not reproduce `b`.
+    test "reordering distinct embeds preserves every embed" do
+      alias OtzelTest.Content.Image
+
+      a = [
+        Otzel.insert(Image.new("http://one.com")),
+        Otzel.insert(Image.new("http://two.com")),
+        Otzel.insert(Image.new("http://three.com")),
+        Otzel.insert(Image.new("http://four.com"))
+      ]
+
+      # Move the third embed to the front and splice text in after it.
+      b = [
+        Otzel.insert(Image.new("http://three.com")),
+        Otzel.insert("GGGG"),
+        Otzel.insert(Image.new("http://one.com")),
+        Otzel.insert(Image.new("http://two.com")),
+        Otzel.insert(Image.new("http://four.com"))
+      ]
+
+      assert Otzel.compose(a, Otzel.diff(a, b)) =~ b
+    end
   end
 
   describe ".diff/2 (mixed embed + text)" do
