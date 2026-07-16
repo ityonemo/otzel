@@ -21,8 +21,21 @@ defmodule Otzel do
 
   The same delta format represents both:
 
-  - **Documents**: Deltas consisting only of insert operations
-  - **Changes**: Deltas that may include retain and delete operations
+  - **Documents**: Deltas consisting only of insert operations. A document is a
+    materialized state. `to_string/1` requires this form and will raise on a
+    delta that contains a retain or delete.
+  - **Changes**: Deltas that may include retain and delete operations. A change
+    is a *transition* between two documents.
+
+  A change is **base-relative**: it only makes sense applied to the exact document
+  it was authored against. Applying a change to a document of a different length
+  overruns and produces an invalid delta (surfacing as a `Retain{target: n} is
+  invalid` error, or a `nil` while finalizing). Composing a document with a change
+  yields a document again: `compose(document, change) -> document`.
+
+  Keeping the two straight is the single most important discipline when building
+  on Otzel — most consistency bugs are a change applied to the wrong base, or a
+  change mistaken for a document.
 
   ## Example Usage
 
@@ -41,6 +54,95 @@ defmodule Otzel do
   - `transform/3` - Adjust a delta for concurrent edits
   - `invert/2` - Create an undo delta
   - `diff/2` - Compute the delta between two documents
+
+  ## Building a collaborative system
+
+  A collaborative document is an ordered log of changes plus a way to materialize
+  the current document from that log. Editing is a round trip between a **client**
+  (which holds a local view and un-acknowledged edits) and a **server** (the
+  authority that orders changes and resolves concurrency).
+
+  The client authors a change `sent` against the document it currently sees
+  (`based_on`). By the time the server processes it, other clients may have
+  committed intervening work — the **official** delta. The server rebases the
+  submission over that work and applies it:
+
+      official = # composed changes committed after based_on
+      effective = Otzel.transform(official, sent)
+      new_doc   = Otzel.compose(current_doc, effective)
+
+  This is the OT convergence law at work: transforming `sent` past `official`
+  produces a change that lands consistently regardless of interleaving.
+
+  The client then reconciles. If it made no edits while waiting, it simply adopts
+  `new_doc`. If it kept editing (a residual change `extra`, authored against
+  `compose(based_doc, sent)`), it must rebase that residual onto the new document
+  **without re-fetching from scratch** — it reconstructs the document as of its
+  own committed change and bridges across the base change:
+
+      v      = Otzel.compose(based_doc, sent)   # what extra was authored against
+      extra2 = Otzel.transform(Otzel.diff(v, new_doc), extra)
+
+  There are two symmetric transforms — one on the server (rebase the submission),
+  one on the client (rebase the residual) — and they must use the **same
+  priority** (see below).
+
+  ## Structural rules
+
+  These invariants are what make a real collaborative system converge. Each is
+  easy to violate and each violation produces a subtle, interleaving-dependent
+  bug:
+
+  1. **Store effective changes, not raw submissions.** To roll up "everything
+     committed after point X" with `compose/2`, the log must hold each change's
+     *effective* form (the submission already transformed over what preceded it).
+     Effective changes were each applied to the running document in order, so they
+     chain-compose. Raw submissions share a `based_on` base and do **not** chain —
+     composing them overruns and fails.
+
+  2. **Rebase against materialized documents, not raw changes.** To move a change
+     from one base to another, reconstruct the real *document* at each point and
+     `diff/2` them (`transform(diff(old_base, new_base), change)`). Composing raw
+     base-relative changes to synthesize the bridge does not work.
+
+  3. **A retain with attributes is not a no-op.** `retain(n, %{...})` changes
+     formatting. "This change has no effect" means it has no insert, no delete,
+     **and** no attribute-bearing retain — not merely "it contains only retains".
+
+  4. **Use one transform priority consistently.** `transform/3`'s priority
+     (`:left`/`:right`) decides who wins when two edits insert at the same
+     position. The server-side and client-side transforms of a concurrent pair
+     must agree, or the two sides resolve a tie differently and diverge — even
+     though the text may look identical.
+
+  ## Checklist: synchronous collaboration
+
+  A client that always waits for its change to be acknowledged before editing
+  again:
+
+  1. Seed the document with a change onto `quill_init/0`, not a raw document
+     (a raw document composes onto the initial newline and doubles it).
+  2. On a local edit, `diff/2` the current view to the mutated document and fold
+     it into pending with `compose/2`.
+  3. To sync, submit `{pending, based_on}` to the log; clear pending.
+  4. Server: roll up the official changes after `based_on`, `transform/3` the
+     submission over them, `compose/2` onto the current document, and store the
+     **effective** change.
+  5. Re-materialize the client from the new document and adopt the new head as
+     `based_on`.
+
+  ## Checklist: asynchronous collaboration
+
+  A client that keeps editing while its change is in flight:
+
+  1-4. As above, but at step 3 keep the submitted change as `sent` and **keep
+       editing**, accumulating a residual `extra` against the (now stale) base.
+  5. When the reply arrives, reconstruct the document as of your own committed
+     change (`new_doc`), then rebase the residual in place:
+     `extra2 = transform(diff(compose(based_doc, sent), new_doc), extra)`.
+  6. Re-anchor `based_on` to your own change, set the view to `new_doc`, and keep
+     `extra2` as the new pending. Do **not** re-materialize from the current head
+     — that would discard the residual.
 
   ## Configuration
 
